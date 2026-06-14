@@ -49,8 +49,11 @@ def main():
     )
     api.set_window(window)
 
-    tray = TrayIcon(window)
+    tray = TrayIcon(window, check_fn=lambda: any(
+        s.status == "running" for s in api.engine.slots
+    ))
     tray.start()
+    api.set_tray(tray)
 
     webview.start(gui="cocoa")
 

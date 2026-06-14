@@ -22,6 +22,13 @@ class Api:
     def set_window(self, window):
         self.window = window
 
+    def set_tray(self, tray):
+        self._tray = tray
+
+    def _refresh_tray(self):
+        if hasattr(self, "_tray") and self._tray:
+            self._tray.refresh_icon()
+
     def resize_window(self, width: int, height: int):
         if not self.window:
             return {"ok": False, "error": "Window is not available"}
@@ -75,16 +82,19 @@ class Api:
 
     def start_slot(self, index: int, subject_id: int | None = None):
         self.engine.start(index, subject_id)
+        self._refresh_tray()
         return {"ok": True, "slot": self.engine.get_slot(index).to_dict()}
 
     def pause_slot(self, index: int):
         self.engine.pause(index)
+        self._refresh_tray()
         return {"ok": True, "slot": self.engine.get_slot(index).to_dict()}
 
     def archive_slot(self, index: int, subject_id: int | None = None, description: str = ""):
         if description:
             self.engine.set_description(index, description)
         record_id = self.engine.archive(index)
+        self._refresh_tray()
         return {"ok": True, "record_id": record_id}
 
     def get_slot_state(self, index: int):

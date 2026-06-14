@@ -1,57 +1,24 @@
-"""System tray — native NSStatusBar item with template circle icon.
+"""System tray — native NSStatusBar with state-dependent SF Symbols.
 
-Uses PyObjC directly. Quit confirmation uses native NSAlert
-(webview evaluate_js doesn't work when window is hidden).
+Active (timers running): clock.badge.checkmark
+Idle (no timers):      clock.badge.xmark
+
+Uses PyObjC directly. Quit confirmation uses native NSAlert.
+State checked via a callable injected from main.py — reads the live
+TimerEngine instance, avoiding DB sync / session-recovery issues.
 """
 from __future__ import annotations
-
-import os
-import struct
-import tempfile
-import zlib
 
 import AppKit
 from Foundation import NSObject
 
 
-def _make_icon_png() -> str:
-    """Create an 18×18 filled-circle template PNG, return file path."""
-    size = 18
-    cx = 9.0
-    cy = 9.0
-    r2 = 5.0 * 5.0
-    pixels = bytearray()
-    for y in range(size):
-        row = b""
-        for x in range(size):
-            dx = x + 0.5 - cx
-            dy = y + 0.5 - cy
-            if dx * dx + dy * dy <= r2:
-                row += b"\x00\x00\x00\xff"
-            else:
-                row += b"\x00\x00\x00\x00"
-        pixels.extend(row)
+# ── State helpers ────────────────────────────────────────
 
-    def _chunk(ct: bytes, data: bytes) -> bytes:
-        c = ct + data
-        return struct.pack(">I", len(data)) + c + struct.pack(">I", zlib.crc32(c) & 0xFFFFFFFF)
-
-    sig = b"\x89PNG\r\n\x1a\n"
-    ihdr = _chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 6, 0, 0, 0))
-    filtered = b""
-    for y in range(size):
-        filtered += b"\x00" + bytes(pixels[y * size * 4 : (y + 1) * size * 4])
-    idat = _chunk(b"IDAT", zlib.compress(filtered))
-    iend = _chunk(b"IEND", b"")
-
-    fd, path = tempfile.mkstemp(suffix=".png", prefix="alangrapher_tray_")
-    with os.fdopen(fd, "wb") as f:
-        f.write(sig + ihdr + idat + iend)
-    return path
-
-
-def _check_active() -> bool:
-    """True if any timer slot is running or has elapsed time."""
+def _check_active_standalone() -> bool:
+    """True if any timer slot is running or has elapsed time.
+    Standalone DB read, used by quit confirmation.
+    """
     try:
         from app.storage import get_setting
         from timer_engine import TimerEngine
@@ -88,11 +55,16 @@ def _archive_all():
         pass
 
 
+# ── Target (menu action receiver) ────────────────────────
+
 class _TrayTarget(NSObject):
-    """Receiver for status-bar menu actions."""
+    """Receiver for status-bar menu actions and timer refresh."""
 
     def setWindow_(self, window):
         self._window = window
+
+    def setTray_(self, tray):
+        self._tray = tray
 
     def showWindow_(self, _sender):
         if self._window:
@@ -102,10 +74,15 @@ class _TrayTarget(NSObject):
         """Show native quit confirmation or exit directly."""
         if not self._window:
             return
-        if _check_active():
+        if _check_active_standalone():
             self._showQuitAlert()
         else:
             self._window.destroy()
+
+    def refreshIcon_(self, _timer):
+        """Called by NSTimer every 2s — swap icon based on timer state."""
+        if self._tray:
+            self._tray.refresh_icon()
 
     def _showQuitAlert(self):
         alert = AppKit.NSAlert.alloc().init()
@@ -114,11 +91,9 @@ class _TrayTarget(NSObject):
         alert.addButtonWithTitle_("Cancel")
         alert.addButtonWithTitle_("Archive")
         alert.addButtonWithTitle_("Pause")
-        # Make Pause destructive-looking by setting alert style
         alert.setAlertStyle_(AppKit.NSAlertStyleWarning)
 
         response = alert.runModal()
-        # Button indices: 1000 = first, 1001 = second, 1002 = third
         if response == AppKit.NSAlertFirstButtonReturn:   # Cancel
             return
         elif response == AppKit.NSAlertSecondButtonReturn:  # Archive
@@ -129,25 +104,61 @@ class _TrayTarget(NSObject):
             self._window.destroy()
 
 
-class TrayIcon:
-    """Menu bar status item for Alangrapher."""
+# ── TrayIcon ─────────────────────────────────────────────
 
-    def __init__(self, window):
+class TrayIcon:
+    """Menu bar status item for Alangrapher.
+
+    Shows clock.badge.checkmark when timers are running,
+    clock.badge.xmark when idle.
+
+    check_fn: callable → bool, injected from main.py.
+    Should read the live Api.engine, not create a new TimerEngine.
+    """
+
+    SF_ACTIVE = "clock.badge.checkmark"
+    SF_IDLE   = "clock.badge.xmark"
+
+    def __init__(self, window, check_fn: callable):
         self.window = window
+        self._check_running = check_fn
         self._status_item = None
+        self._active_image = None
+        self._idle_image = None
+
+    def _load_symbol(self, name: str) -> AppKit.NSImage:
+        """Load an SF Symbol as a template image, scaled to fill menu bar."""
+        image = AppKit.NSImage.imageWithSystemSymbolName_accessibilityDescription_(
+            name, None
+        )
+        if image is None:
+            raise RuntimeError(f"SF Symbol not found: {name}")
+        # Scale up — default is too small in the menu bar
+        config = AppKit.NSImageSymbolConfiguration.configurationWithPointSize_weight_scale_(
+            16.0,
+            AppKit.NSFontWeightRegular,
+            AppKit.NSImageSymbolScaleMedium,
+        )
+        sized = image.imageWithSymbolConfiguration_(config)
+        sized.setTemplate_(True)
+        return sized
 
     def start(self):
-        icon_path = _make_icon_png()
-        image = AppKit.NSImage.alloc().initWithContentsOfFile_(icon_path)
-        image.setTemplate_(True)
+        # Pre-load both SF Symbols
+        self._active_image = self._load_symbol(self.SF_ACTIVE)
+        self._idle_image   = self._load_symbol(self.SF_IDLE)
 
+        # Status bar item
         bar = AppKit.NSStatusBar.systemStatusBar()
         self._status_item = bar.statusItemWithLength_(AppKit.NSVariableStatusItemLength)
-        button = self._status_item.button()
-        button.setImage_(image)
 
+        # Set initial icon
+        self.refresh_icon()
+
+        # Target & menu
         target = _TrayTarget.alloc().init()
         target.setWindow_(self.window)
+        target.setTray_(self)
         self._target = target
 
         menu = AppKit.NSMenu.alloc().init()
@@ -161,6 +172,21 @@ class TrayIcon:
         )
         quit_item.setTarget_(target)
         self._status_item.setMenu_(menu)
+
+        # Periodic refresh — every 2 seconds
+        self._timer = AppKit.NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
+            2.0, target, "refreshIcon:", None, True
+        )
+
+    def refresh_icon(self):
+        """Swap icon to match current timer state."""
+        if not self._status_item:
+            return
+        button = self._status_item.button()
+        if self._check_running():
+            button.setImage_(self._active_image)
+        else:
+            button.setImage_(self._idle_image)
 
     def hide(self):
         if self.window:
