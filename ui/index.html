@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alangrapher · Liquid Glass (760×620)</title>
+<!-- INLINE_CSS -->
+</head>
+<body>
+<div class="window">
+  <div class="prototype" id="prototype" style="position:relative;">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">Alangrapher</div>
+      <nav style="display:flex;flex-direction:column;gap:1px;flex:1;">
+        <div class="nav-item active" data-page="timer">
+          <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></svg>
+          <span>Timer</span></div>
+        <div class="nav-item" data-page="todo">
+          <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><rect x="3" y="4" width="6" height="6" rx="1"/></svg>
+          <span>Todo</span></div>
+        <div class="nav-item" data-page="records">
+          <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/></svg>
+          <span>Records</span></div>
+        <div class="nav-item" data-page="subjects">
+          <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17a4 4 0 0 1-8 0V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2Z"/><path d="M16.7 13H19a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H7"/><path d="M 7 17h.01"/><path d="m11 8 2.3-2.3a2.4 2.4 0 0 1 3.404.004L18.6 7.6a2.4 2.4 0 0 1 .026 3.434L9.9 19.8"/></svg>
+          <span>Subjects</span></div>
+        <div class="nav-item" data-page="export">
+          <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1"/><path d="M2 13h10"/><path d="m9 16 3-3-3-3"/></svg>
+          <span>Export</span></div>
+        <div class="nav-item" data-page="settings">
+          <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><circle cx="12" cy="12" r="4"/></svg>
+          <span>Settings</span></div>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="theme-toggle" id="darkToggle"><svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 5h4"/><path d="M20 3v4"/><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg> Dark</button>
+        <div class="sidebar-tagline easter-egg-trigger" id="easterEggTrigger">Code of Timing</div>
+      </div>
+    </aside>
+
+    <!-- Content -->
+    <main class="content">
+      <div class="page active" id="page-timer">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Timer</div>
+          <div class="page-sub">Today · 2026-06-12 &nbsp; Week 24 (Mon–Fri)</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="compactBtn" title="Compact mode"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 15 6 6m-6-6v4.8m0-4.8h4.8"/><path d="M9 19.8V15m0 0H4.2M9 15l-6 6"/><path d="M15 4.2V9m0 0h4.8M15 9l6-6"/><path d="M9 4.2V9m0 0H4.2M9 9 3 3"/></svg></button>
+      </div>
+
+      <div class="card">
+        <div class="slot-header">
+          <span class="slot-label">Timer 1</span>
+          <span class="badge idle"><span class="dot"></span> Idle</span>
+          <span class="slot-subject">—</span>
+          <span style="color:var(--muted);cursor:pointer;font-size:13px;"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+          <span style="color:var(--muted);cursor:pointer;font-size:11px;"><svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+          <button class="add-slot-btn" title="Add timer slot (max 5)"><svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+        </div>
+        <div class="timer-clock">00:00:00</div>
+        <div class="timer-subject-line">—</div>
+        <div class="form-row"><div class="form-label">Subject</div><div class="select-wrapper"><select class="form-select"><option>— Select subject —</option></select></div></div>
+        <div class="form-row"><div class="form-label">Description (optional)</div><input class="form-input" placeholder="What are you working on?"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" style="flex:1;"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>Start</button>
+          <button class="btn btn-secondary" style="flex:1;"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 15h18"/><path d="m15 8-3 3-3-3"/></svg>Archive</button>
+        </div>
+      </div>
+
+      <div class="tile-row">
+        <div class="tile"><div class="tile-label">Today</div><div class="tile-value">3h 15m</div></div>
+        <div class="tile"><div class="tile-label">This Week</div><div class="tile-value accent">12h 30m</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:0;">
+        <div class="records-header">Today's Records</div>
+        <table class="records-table">
+          <thead><tr><th>Subject</th><th>Description</th><th style="text-align:right">Duration</th></tr></thead>
+          <tbody>
+            <tr><td>Code Review</td><td>PR #142 — auth module</td><td style="text-align:right">1h 30m</td></tr>
+            <tr><td>Design System</td><td>Token audit</td><td style="text-align:right">45m</td></tr>
+            <tr><td>Documentation</td><td>—</td><td style="text-align:right">1h 00m</td></tr>
+          </tbody>
+        </table>
+      </div>
+      </div>
+
+      <div class="page" id="page-todo">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Todo</div>
+            <div class="page-sub">3 pending · 0 done</div>
+          </div>
+        </div>
+
+        <!-- Inline add — subject + description -->
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 4px;margin-bottom:8px;border-bottom:1px solid var(--border);">
+          <span style="color:var(--muted);font-size:13px;flex-shrink:0;">+</span>
+          <input id="todoSubject" placeholder="Subject" style="flex:1;background:transparent;border:none;padding:6px 4px;font-size:13px;color:var(--text);outline:none;border-bottom:1px solid transparent;" onfocus="this.style.borderBottomColor='var(--accent)'" onblur="this.style.borderBottomColor='transparent'" onkeydown="if(event.key==='Enter')addTodo()">
+          <input id="todoDesc" placeholder="Description (optional)" style="flex:2;background:transparent;border:none;padding:6px 4px;font-size:12px;color:var(--text2);outline:none;border-bottom:1px solid transparent;" onfocus="this.style.borderBottomColor='var(--accent)'" onblur="this.style.borderBottomColor='transparent'" onkeydown="if(event.key==='Enter')addTodo()">
+          <button class="btn btn-primary btn-sm" onclick="addTodo()" style="padding:4px 10px;font-size:11px;border-radius:6px;">✓</button>
+        </div>
+
+        <div class="todo-list">
+          <div class="todo-item">
+            <div class="todo-checkbox" onclick="toggleTodo(this)"></div>
+            <div class="todo-item-info">
+              <div class="todo-item-subject">Code Review</div>
+              <div class="todo-item-desc">PR #144 — payment module refactor</div>
+            </div>
+            <span class="todo-start-btn" onclick="startTodoTimer(this)" title="Start timer"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></span>
+          </div>
+          <div class="todo-item">
+            <div class="todo-checkbox" onclick="toggleTodo(this)"></div>
+            <div class="todo-item-info">
+              <div class="todo-item-subject">Design System</div>
+              <div class="todo-item-desc">Component token audit — Phase 2</div>
+            </div>
+            <span class="todo-start-btn" onclick="startTodoTimer(this)" title="Start timer"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></span>
+          </div>
+          <div class="todo-item">
+            <div class="todo-checkbox" onclick="toggleTodo(this)"></div>
+            <div class="todo-item-info">
+              <div class="todo-item-subject">Documentation</div>
+              <div class="todo-item-desc">API reference — v2 migration guide</div>
+            </div>
+            <span class="todo-start-btn" onclick="startTodoTimer(this)" title="Start timer"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Records ═══ -->
+      <div class="page" id="page-records">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Records</div>
+            <div class="page-sub">Filter by date · <span id="recordsCount">6</span> entries total</div>
+          </div>
+          <div class="filter-chips">
+            <span class="chip active" onclick="setRecordsFilter('Today')">Today</span>
+            <span class="chip" onclick="setRecordsFilter('Week')">This Week</span>
+            <span class="chip" onclick="setRecordsFilter('Month')">This Month</span>
+            <span class="chip" onclick="setRecordsFilter('All')">All</span>
+          </div>
+        </div>
+        <!-- Inline add form row -->
+        <div class="records-add-row" id="recordsAddRow">
+          <input type="date" id="recordsDateField" class="records-add-date" value="2026-06-12" style="flex:0 0 110px; border-bottom-style:solid; display:none;">
+          <select class="records-add-subject" style="flex:0.7;">
+            <option>Code Review</option><option>Design System</option><option>Documentation</option><option>Meeting</option><option>Research</option>
+          </select>
+          <input type="text" class="records-add-desc" placeholder="Description" style="flex:1.3;">
+          <input type="time" class="records-add-start" value="09:00">
+          <input type="time" class="records-add-end" value="10:00">
+          <button class="confirm-btn" onclick="addRecord()">✓</button>
+        </div>
+        <div class="records-scroll-wrap">
+        <table class="records-table">
+            <thead><tr><th class="records-date-col">Date</th><th>Subject</th><th>Description</th><th>Start</th><th>End</th><th style="text-align:right">Duration</th><th style="width:60px"></th></tr></thead>
+            <tbody id="recordsBody">
+              <tr data-date="2026-06-12" data-subject="Code Review" data-desc="PR #142 — auth module" data-start="09:30" data-end="11:00" data-dur="1h 30m"><td class="cell-date records-date-col">2026-06-12</td><td class="cell-subj">Code Review</td><td class="cell-desc">PR #142 — auth module</td><td class="cell-start">09:30</td><td class="cell-end">11:00</td><td class="cell-dur" style="text-align:right">1h 30m</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>
+              <tr data-date="2026-06-12" data-subject="Design System" data-desc="Token audit" data-start="11:15" data-end="12:00" data-dur="45m"><td class="cell-date records-date-col">2026-06-12</td><td class="cell-subj">Design System</td><td class="cell-desc">Token audit</td><td class="cell-start">11:15</td><td class="cell-end">12:00</td><td class="cell-dur" style="text-align:right">45m</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>
+              <tr data-date="2026-06-12" data-subject="Documentation" data-desc="API migration guide" data-start="13:00" data-end="14:00" data-dur="1h 00m"><td class="cell-date records-date-col">2026-06-12</td><td class="cell-subj">Documentation</td><td class="cell-desc">API migration guide</td><td class="cell-start">13:00</td><td class="cell-end">14:00</td><td class="cell-dur" style="text-align:right">1h 00m</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>
+              <tr data-date="2026-06-12" data-subject="Meeting" data-desc="Sprint planning" data-start="14:30" data-end="15:15" data-dur="45m"><td class="cell-date records-date-col">2026-06-12</td><td class="cell-subj">Meeting</td><td class="cell-desc">Sprint planning</td><td class="cell-start">14:30</td><td class="cell-end">15:15</td><td class="cell-dur" style="text-align:right">45m</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>
+              <tr data-date="2026-06-12" data-subject="Research" data-desc="Competitor analysis" data-start="15:30" data-end="16:30" data-dur="1h 00m"><td class="cell-date records-date-col">2026-06-12</td><td class="cell-subj">Research</td><td class="cell-desc">Competitor analysis</td><td class="cell-start">15:30</td><td class="cell-end">16:30</td><td class="cell-dur" style="text-align:right">1h 00m</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>
+              <tr data-date="2026-06-12" data-subject="Code Review" data-desc="PR #144 — payment refactor" data-start="16:45" data-end="18:00" data-dur="1h 15m"><td class="cell-date records-date-col">2026-06-12</td><td class="cell-subj">Code Review</td><td class="cell-desc">PR #144 — payment refactor</td><td class="cell-start">16:45</td><td class="cell-end">18:00</td><td class="cell-dur" style="text-align:right">1h 15m</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ Subjects ═══ -->
+      <div class="page" id="page-subjects">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Subjects</div>
+            <div class="page-sub">5 subjects — manage your activity categories</div>
+          </div>
+        </div>
+        <!-- Inline add row -->
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 4px;margin-bottom:8px;border-bottom:1px solid var(--border);">
+          <span class="subject-dot" style="background:#5E6AD2;cursor:pointer;" onclick="const colors=['#5E6AD2','#D97A52','#2DA44E','#7B85E8','#CC5544','#E5A837','#6B7DB3','#9B59B6'];const i=parseInt(prompt('Pick color 0-7:','0'));if(i>=0&&i<8)this.style.background=colors[i]"></span>
+          <input class="form-input" placeholder="Subject name" style="flex:1;border:none;background:transparent;padding:6px 8px;font-size:13px;" onkeydown="if(event.key==='Enter')addSubject()">
+          <button class="btn btn-primary btn-sm" style="padding:4px 10px;font-size:11px;" onclick="addSubject()">✓</button>
+        </div>
+        <div class="subjects-list">
+          <div class="subject-row"><span class="subject-dot" style="background:#5E6AD2;"></span><span class="subject-name">Code Review</span><span class="subject-actions"><span class="act" onclick="editSubject(this)">✎</span><span class="act" onclick="delSubject(this)">🗑</span></span></div>
+          <div class="subject-row"><span class="subject-dot" style="background:#34C98B;"></span><span class="subject-name">Design System</span><span class="subject-actions"><span class="act" onclick="editSubject(this)">✎</span><span class="act" onclick="delSubject(this)">🗑</span></span></div>
+          <div class="subject-row"><span class="subject-dot" style="background:#F0B73F;"></span><span class="subject-name">Documentation</span><span class="subject-actions"><span class="act" onclick="editSubject(this)">✎</span><span class="act" onclick="delSubject(this)">🗑</span></span></div>
+          <div class="subject-row"><span class="subject-dot" style="background:#4DA6FF;"></span><span class="subject-name">Meeting</span><span class="subject-actions"><span class="act" onclick="editSubject(this)">✎</span><span class="act" onclick="delSubject(this)">🗑</span></span></div>
+          <div class="subject-row"><span class="subject-dot" style="background:#D64430;"></span><span class="subject-name">Research</span><span class="subject-actions"><span class="act" onclick="editSubject(this)">✎</span><span class="act" onclick="delSubject(this)">🗑</span></span></div>
+        </div>
+      </div>
+
+      <!-- ═══ Export ═══ -->
+      <div class="page" id="page-export">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Export</div>
+            <div class="page-sub">Last export: No exports yet</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="form-row"><div class="form-label">Date Range</div><div style="display:flex;gap:8px;"><input class="form-input" value="2026-06-05" style="flex:1;"><span style="color:var(--muted);align-self:center;">→</span><input class="form-input" value="2026-06-12" style="flex:1;"></div></div>
+          <div class="form-row"><div class="form-label">Format</div><div style="display:flex;gap:8px;"><button class="btn btn-secondary active">Excel (.xlsx)</button><button class="btn btn-secondary">Markdown</button><button class="btn btn-secondary">JSON</button></div></div>
+          <button class="btn btn-primary" style="width:100%;margin-top:4px;"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1"/><path d="M2 13h10"/><path d="m9 16 3-3-3-3"/></svg> Export</button>
+        </div>
+      </div>
+
+      <!-- ═══ Settings ═══ -->
+      <div class="page" id="page-settings">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Settings</div>
+            <div class="page-sub">Application preferences</div>
+          </div>
+        </div>
+        <div class="settings-list">
+          <div class="setting-row">
+            <div class="setting-info"><div class="setting-label">Week starts on</div><div class="setting-desc">First day of the week for tracking</div></div>
+            <select class="form-select" style="width:100px;"><option>Monday</option><option>Sunday</option></select>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info"><div class="setting-label">Compact by default</div><div class="setting-desc">Start in compact floating mode</div></div>
+            <label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info"><div class="setting-label">Default Slots</div><div class="setting-desc">Number of concurrent timer slots</div></div>
+            <select class="form-select" style="width:80px;"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info"><div class="setting-label">Auto Backup</div><div class="setting-desc">Hourly backup to ~/Documents/Alangrapher/backups/</div></div>
+            <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info"><div class="setting-label">Backup Location</div><div class="setting-desc">~/Documents/Alangrapher/backups/</div></div>
+            <button class="btn btn-secondary btn-sm">Choose…</button>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info"><div class="setting-label">Minimize to Tray</div><div class="setting-desc">Close window sends to system tray</div></div>
+            <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row" style="border-bottom:none;">
+            <div class="setting-info"><div class="setting-label" style="color:var(--danger);">Reset All Data</div><div class="setting-desc">Permanently delete all records, todos, subjects, and settings</div></div>
+            <button class="btn btn-sm" style="background:var(--danger);color:#fff;font-weight:600;padding:6px 14px;border-radius:8px;cursor:pointer;border:none;font-size:11px;">Reset</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Compact floating -->
+    <div class="compact-panel" id="compactPanel">
+      <button class="compact-expand" id="expandBtn"><svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 15 6 6"/><path d="m15 9 6-6"/><path d="M21 16v5h-5"/><path d="M21 8V3h-5"/><path d="M3 16v5h5"/><path d="m3 21 6-6"/><path d="M3 8V3h5"/><path d="M9 9 3 3"/></svg></button>
+      <div class="compact-top">
+        <span class="badge running"><span class="dot"></span> Running</span>
+      </div>
+      <div class="compact-timer-row">
+        <span class="arrow"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></span>
+        <div class="compact-clock-wrap">
+          <div class="compact-slot-indicator">1 / 3</div>
+          <div class="compact-clock">01:23:45</div>
+        </div>
+        <span class="arrow"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span>
+      </div>
+      <div class="compact-subject">Code Review — PR #142</div>
+      <div class="compact-actions">
+        <button class="btn btn-primary"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/></svg>Pause</button>
+        <button class="btn btn-secondary"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 15h18"/><path d="m15 8-3 3-3-3"/></svg>Archive</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Easter egg modal -->
+<div class="modal-overlay" id="easterEggModal">
+  <div class="modal-card">
+    <div class="modal-accent"></div>
+    <div class="modal-title">《Alangrapher 计时准则》</div>
+    <div class="modal-subtitle">The Alangrapher's Code of Timing</div>
+    <div class="modal-quote">"时间不会说谎。"</div>
+    <div class="modal-quote-en">"Time tells no lie."</div>
+    <div class="modal-divider"></div>
+    <div class="modal-rule"><div class="modal-rule-no">规则 1</div><div class="modal-rule-zh">不存在完美的记录。</div><div class="modal-rule-en">Do not chase a flawless log.</div></div>
+    <div class="modal-rule"><div class="modal-rule-no">规则 2</div><div class="modal-rule-zh">虚构记录不会创造时间。</div><div class="modal-rule-en">Never summon time with fabricated entries.</div></div>
+    <div class="modal-rule"><div class="modal-rule-no">规则 3</div><div class="modal-rule-zh">做时间的战友而非俘虏。</div><div class="modal-rule-en">Walk with time as a comrade, not a captive.</div></div>
+    <div class="modal-rule"><div class="modal-rule-no">规则 4</div><div class="modal-rule-zh">时间不代表成绩。</div><div class="modal-rule-en">Don't let time fool you into pride.</div></div>
+    <div class="modal-rule"><div class="modal-rule-no">规则 5</div><div class="modal-rule-zh">为每一个不必记录的日子干杯。</div><div class="modal-rule-en">Toast to the days you never had to record.</div></div>
+    <div class="modal-divider"></div>
+    <div class="modal-signature">Alan Zhu</div>
+  </div>
+</div>
+
+<!-- INLINE_JS -->
+</body>
+</html>

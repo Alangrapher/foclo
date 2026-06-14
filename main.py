@@ -9,21 +9,33 @@ import os
 import webview
 from api import Api
 from database import init_db
-# from tray import Tray
 
-# Resolve absolute path to index.html
-INDEX_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
+PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+UI_DIR = os.path.join(PROJECT_DIR, "ui")
+INDEX_PATH = os.path.join(UI_DIR, "index.html")
+CSS_PATH = os.path.join(UI_DIR, "styles.css")
+JS_PATH = os.path.join(UI_DIR, "app.js")
+
+
+def build_html() -> str:
+    """Read ui/* files and inline CSS/JS into a single HTML string."""
+    with open(INDEX_PATH, "r", encoding="utf-8") as f:
+        html = f.read()
+    with open(CSS_PATH, "r", encoding="utf-8") as f:
+        css = f.read()
+    with open(JS_PATH, "r", encoding="utf-8") as f:
+        js = f.read()
+
+    html = html.replace("<!-- INLINE_CSS -->", f"<style>\n{css}\n</style>")
+    html = html.replace("<!-- INLINE_JS -->", f"<script>\n{js}\n</script>")
+    return html
 
 
 def main():
     init_db()
 
     api = Api()
-    # tray = Tray(api)
-
-    # Read index.html content
-    with open(INDEX_PATH, "r", encoding="utf-8") as f:
-        html = f.read()
+    html = build_html()
 
     window = webview.create_window(
         title="Alangrapher",
