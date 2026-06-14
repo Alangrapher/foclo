@@ -76,9 +76,18 @@ async function loadSubjects() {
 }
 
 async function loadSlots() {
+  const localState = {};
+  slots.forEach(s => { localState[s.index] = { subject_id: s.subject_id, description: s.description, collapsed: s.collapsed }; });
   slots = await window.pywebview.api.get_all_slots();
   if (!slots.length) slots = [{index: 0, status: 'idle', subject_id: null, description: '', display_time: '00:00:00', collapsed: false}];
-  slots.forEach(s => { if (s.collapsed === undefined) s.collapsed = false; });
+  slots.forEach(s => {
+    if (localState[s.index]) {
+      if (s.subject_id === null || s.subject_id === undefined) s.subject_id = localState[s.index].subject_id;
+      if (s.description === null || s.description === undefined || s.description === '') s.description = localState[s.index].description || '';
+      s.collapsed = localState[s.index].collapsed || false;
+    }
+    if (s.collapsed === undefined) s.collapsed = false;
+  });
   compactIndex = Math.min(compactIndex, slots.length - 1);
 }
 
@@ -278,14 +287,24 @@ async function clearAndRemove() {
 
 function setSlotSubject(index, value) {
   slots[index].subject_id = Number(value) || null;
-  updateTimerCards();
+  const card = document.querySelector(`.timer-slot-card[data-slot="${index}"]`);
+  if (card) {
+    const subj = subjectById(slots[index].subject_id);
+    const el = card.querySelector('.timer-subject-line');
+    if (el) el.textContent = `${subj ? subj.name : '—'}${slots[index].description ? ' — ' + slots[index].description : ''}`;
+  }
   renderCompact();
 }
 
 function setSlotDescription(index, value) {
   slots[index].description = value;
   if (window.pywebview && window.pywebview.api) window.pywebview.api.set_description(index, value);
-  updateTimerCards();
+  const card = document.querySelector(`.timer-slot-card[data-slot="${index}"]`);
+  if (card) {
+    const subj = subjectById(slots[index].subject_id);
+    const el = card.querySelector('.timer-subject-line');
+    if (el) el.textContent = `${subj ? subj.name : '—'}${slots[index].description ? ' — ' + slots[index].description : ''}`;
+  }
   renderCompact();
 }
 
@@ -325,6 +344,8 @@ function updateTiles() {
   if (vals[1]) vals[1].textContent = records.length + ' records';
 }
 
+let _lastCompactKey = '';
+
 function renderCompact() {
   const slot = slots[compactIndex] || slots[0];
   if (!slot) return;
@@ -334,14 +355,13 @@ function renderCompact() {
   panel.querySelector('.compact-top').innerHTML = `<span class="badge ${status}"><span class="dot"></span> ${status[0].toUpperCase() + status.slice(1)}</span>`;
   panel.querySelector('.compact-slot-indicator').textContent = `${compactIndex + 1} / ${slots.length}`;
   panel.querySelector('.compact-clock').textContent = slot.display_time || '00:00:00';
-  const subjText = subj ? subj.name : '';
+  const subjText = subj ? subj.name : '—';
   const desc = slot.description ? ' — ' + slot.description : '';
-  const combined = subjText + desc;
-  panel.querySelector('.compact-subject').textContent = combined || '';
-  panel.querySelector('.compact-subject').style.display = combined ? '' : 'none';
+  panel.querySelector('.compact-subject').textContent = subjText + desc;
+  panel.querySelector('.compact-subject').style.display = '';
   const arrows = panel.querySelectorAll('.arrow');
-  arrows[0].style.visibility = 'visible';
-  arrows[1].style.visibility = 'visible';
+  arrows[0].style.visibility = slots.length > 1 ? 'visible' : 'hidden';
+  arrows[1].style.visibility = slots.length > 1 ? 'visible' : 'hidden';
   arrows[0].onclick = () => {
     compactIndex = (compactIndex - 1 + slots.length) % slots.length;
     renderCompact();
@@ -351,8 +371,12 @@ function renderCompact() {
     renderCompact();
   };
   const action = status === 'running' ? 'Pause' : status === 'paused' ? 'Resume' : 'Start';
-  const icon = status === 'running' ? '<rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/>' : '<path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/>';
-  panel.querySelector('.compact-actions').innerHTML = `<button class="btn btn-primary" onclick="primaryTimerAction(${slot.index})"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>${action}</button><button class="btn btn-secondary" onclick="archiveSlot(${slot.index})"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 15h18"/><path d="m15 8-3 3-3-3"/></svg>Archive</button>`;
+  const key = `${compactIndex}-${status}`;
+  if (key !== _lastCompactKey) {
+    _lastCompactKey = key;
+    const icon = status === 'running' ? '<rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/>' : '<path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/>';
+    panel.querySelector('.compact-actions').innerHTML = `<button class="btn btn-primary" style="width:145px" onclick="primaryTimerAction(${slot.index})"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>${action}</button><button class="btn btn-secondary" style="width:145px" onclick="archiveSlot(${slot.index})"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 15h18"/><path d="m15 8-3 3-3-3"/></svg>Archive</button>`;
+  }
 }
 
 function enterCompact() {
@@ -362,8 +386,10 @@ function enterCompact() {
   document.querySelector('.content').style.display = 'none';
   const cp = document.getElementById('compactPanel');
   cp.style.display = 'flex';
+  const runningIdx = slots.findIndex(s => s.status === 'running');
+  compactIndex = runningIdx >= 0 ? runningIdx : 0;
   renderCompact();
-  if (pyApi && pyApi.resize_window) pyApi.resize_window(320, 210);
+  if (pyApi && pyApi.resize_window) pyApi.resize_window(380, 230);
 }
 
 function exitCompact() {
