@@ -7,13 +7,15 @@ from app.subject_service import get_subjects, add_subject, update_subject, delet
 from app.record_service import get_records, add_record, update_record, delete_record
 from app.todo_service import get_todos, add_todo, toggle_todo, delete_todo
 from app.settings_service import get_settings, update_setting
+from app.backup_service import BackupService
 
 
 class Api:
     """Exposed to JavaScript via window.pywebview.api."""
 
-    def __init__(self, window=None):
+    def __init__(self, window=None, backup_service: BackupService | None = None):
         self.window = window
+        self._backup = backup_service
         default_slots = int(get_setting("default_slots", "3"))
         self.engine = TimerEngine(num_slots=default_slots)
 
@@ -194,3 +196,34 @@ class Api:
             return {"ok": True, "path": result}
         except ValueError as e:
             return {"ok": False, "error": str(e)}
+
+    # ── Backup ──────────────────────────────────────────
+
+    def trigger_backup(self):
+        """Run a manual backup now."""
+        if not self._backup:
+            return {"ok": False, "error": "Backup service not available"}
+        ok, detail = self._backup.backup_now()
+        return {"ok": ok, "path": detail} if ok else {"ok": False, "error": detail}
+
+    def choose_backup_folder(self, start_dir: str = ""):
+        """Open native folder picker for backup location."""
+        folder = BackupService.choose_folder(start_dir)
+        if folder:
+            update_setting("backup_location", folder)
+            return {"ok": True, "path": folder}
+        return {"ok": False, "error": "Cancelled"}
+
+    def choose_backup_file(self, start_dir: str = ""):
+        """Open native file picker for .db backup files."""
+        path = BackupService.choose_backup_file(start_dir)
+        if path:
+            return {"ok": True, "path": path}
+        return {"ok": False, "error": "Cancelled"}
+
+    def restore_backup(self, backup_path: str):
+        """Restore from backup file, then quit the app."""
+        ok, detail = BackupService.restore_backup(backup_path)
+        if ok and self.window:
+            self.window.destroy()
+        return {"ok": ok, "path": detail} if ok else {"ok": False, "error": detail}

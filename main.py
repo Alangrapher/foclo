@@ -10,6 +10,7 @@ import webview
 from app.bridge import Api
 from app.storage import init_db
 from app.tray import TrayIcon
+from app.backup_service import BackupService
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 UI_DIR = os.path.join(PROJECT_DIR, "ui")
@@ -35,7 +36,10 @@ def build_html() -> str:
 def main():
     init_db()
 
-    api = Api()
+    backup = BackupService()
+    backup.start()
+
+    api = Api(backup_service=backup)
     html = build_html()
 
     window = webview.create_window(

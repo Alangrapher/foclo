@@ -143,6 +143,9 @@ async function loadSettings() {
   const s = await window.pywebview.api.get_settings();
   minimizeToTray = s.minimize_to_tray === '1';
   weekStart = s.week_starts_on === 'Monday' ? 'mon' : 'sun';
+  // Backup state
+  window._backupPath = s.backup_location || '~/Documents/Alangrapher/backups/';
+  window._autoBackup = s.auto_backup !== '0';
 }
 
 async function refreshClocks() {
@@ -715,6 +718,53 @@ function renderSettings() {
   document.querySelectorAll('#page-settings .form-select')[1]?.addEventListener('change', async e => {
     if (window.pywebview && window.pywebview.api) await window.pywebview.api.update_setting('default_slots', e.target.value);
   });
+
+  // ── Backup ──────────────────────────────────────────
+
+  const abToggle = document.getElementById('autoBackupToggle');
+  if (abToggle) {
+    abToggle.checked = window._autoBackup !== false;
+    abToggle.addEventListener('change', async () => {
+      const enabled = abToggle.checked;
+      if (window.pywebview && window.pywebview.api) {
+        await window.pywebview.api.update_setting('auto_backup', enabled ? '1' : '0');
+      }
+    });
+  }
+
+  const chooseBtn = document.getElementById('chooseBackupBtn');
+  const backupPathEl = document.getElementById('backupPath');
+  const backupDescEl = document.getElementById('backupDesc');
+  if (chooseBtn && backupPathEl) {
+    // Reflect saved path
+    const savedPath = window._backupPath || '~/Documents/Alangrapher/backups/';
+    backupPathEl.textContent = savedPath;
+    if (backupDescEl) backupDescEl.textContent = 'Hourly backup to ' + savedPath + '/';
+    chooseBtn.addEventListener('click', async () => {
+      if (!window.pywebview || !window.pywebview.api) return;
+      const result = await window.pywebview.api.choose_backup_folder(backupPathEl.textContent);
+      if (result.ok) {
+        backupPathEl.textContent = result.path;
+        if (backupDescEl) backupDescEl.textContent = 'Hourly backup to ' + result.path + '/';
+      }
+    });
+  }
+
+  // ── Restore ─────────────────────────────────────────
+
+  const restoreBtn = document.getElementById('restoreBackupBtn');
+  if (restoreBtn) {
+    restoreBtn.addEventListener('click', async () => {
+      if (!window.pywebview || !window.pywebview.api) return;
+      const savedPath = window._backupPath || '~/Documents/Alangrapher/backups/';
+      const pick = await window.pywebview.api.choose_backup_file(savedPath);
+      if (!pick.ok) return;  // user cancelled
+      if (!confirm('This will replace ALL current data with the backup from:\n\n' + pick.path + '\n\nThe app will close after restore.')) return;
+      const result = await window.pywebview.api.restore_backup(pick.path);
+      if (!result.ok) alert('Restore failed: ' + result.error);
+      // On success, the Python side calls window.destroy() — app quits
+    });
+  }
 }
 
 function tickLocalSlots() {

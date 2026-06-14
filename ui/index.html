@@ -228,16 +228,20 @@
             <select class="form-select" style="width:80px;"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Auto Backup</div><div class="setting-desc">Hourly backup to ~/Documents/Alangrapher/backups/</div></div>
-            <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            <div class="setting-info"><div class="setting-label">Auto Backup</div><div class="setting-desc" id="backupDesc">Hourly backup to ~/Documents/Alangrapher/backups/</div></div>
+            <label class="toggle"><input type="checkbox" id="autoBackupToggle" checked><span class="toggle-slider"></span></label>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Backup Location</div><div class="setting-desc">~/Documents/Alangrapher/backups/</div></div>
-            <button class="btn btn-secondary btn-sm">Choose…</button>
+            <div class="setting-info"><div class="setting-label">Backup Location</div><div class="setting-desc" id="backupPath">~/Documents/Alangrapher/backups/</div></div>
+            <button class="btn btn-secondary btn-sm" id="chooseBackupBtn">Choose…</button>
           </div>
           <div class="setting-row">
             <div class="setting-info"><div class="setting-label">Minimize to Menu Bar</div><div class="setting-desc">Hide to menu bar on close — timer keeps running</div></div>
             <label class="toggle"><input type="checkbox" id="minimizeTrayToggle" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row" style="border-bottom:none;">
+            <div class="setting-info"><div class="setting-label" style="color:var(--danger);">Restore from Backup</div><div class="setting-desc">Replace all current data with a previous backup</div></div>
+            <button class="btn btn-sm" style="background:var(--danger);color:#fff;font-weight:600;padding:6px 14px;border-radius:8px;cursor:pointer;border:none;font-size:11px;" id="restoreBackupBtn">Restore…</button>
           </div>
           <div class="setting-row" style="border-bottom:none;">
             <div class="setting-info"><div class="setting-label" style="color:var(--danger);">Reset All Data</div><div class="setting-desc">Permanently delete all records, todos, subjects, and settings</div></div>
