@@ -118,6 +118,9 @@ function updateTimerCards() {
     const subj = subjectById(slot.subject_id);
     const subjectEl = card.querySelector('.timer-subject-line');
     if (subjectEl) subjectEl.textContent = `${subj ? subj.name : '—'}${slot.description ? ' — ' + slot.description : ''}`;
+    // Update collapsed header time
+    const slotSubj = card.querySelector('.slot-subject');
+    if (slotSubj && slot.collapsed) slotSubj.textContent = slot.display_time || '00:00:00';
     const badge = card.querySelector('.badge');
     const status = slot.status || 'idle';
     if (badge) {
@@ -174,7 +177,7 @@ function timerCard(slot) {
     <div class="slot-header">
       <span class="slot-label">Timer ${index + 1}</span>
       <span class="badge ${status}"><span class="dot"></span> ${label}</span>
-      <span class="slot-subject">${subj ? esc(subj.name) : '—'}</span>
+      <span class="slot-subject">${slot.collapsed ? esc(slot.display_time || '00:00:00') : (subj ? esc(subj.name) : '—')}</span>
       <span class="slot-collapse" onclick="toggleCollapse(this)" style="color:var(--muted);cursor:pointer;font-size:13px;"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${slot.collapsed ? '<path d="m6 9 6 6 6-6"/>' : '<path d="m18 15-6-6-6 6"/>'}</svg></span>
       ${slots.length > 1 ? `<span onclick="confirmRemoveSlot(${index})" style="color:var(--muted);cursor:pointer;font-size:11px;"><svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>` : ''}
       ${slots.length < 5 ? `<button class="add-slot-btn" title="Add timer slot (max 5)" onclick="addSlot()"><svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>` : ''}
@@ -225,6 +228,9 @@ async function archiveSlot(index) {
   const desc = card ? card.querySelector('.form-input').value : slots[index].description;
   if (window.pywebview && window.pywebview.api) {
     await window.pywebview.api.archive_slot(index, sid, desc || '');
+    // Clear local state so loadSlots merge doesn't restore old subject/description
+    slots[index].subject_id = null;
+    slots[index].description = '';
     await Promise.all([loadSlots(), loadRecords()]);
   } else {
     const slot = slots[index];
@@ -316,6 +322,12 @@ function toggleCollapse(el, ev) {
   const isHidden = clock.style.display === 'none';
   slots[index].collapsed = !isHidden;
   card.querySelectorAll('.timer-clock,.timer-subject-line,.form-row,.btn-row').forEach(x => x.style.display = isHidden ? '' : 'none');
+  // Update header text: collapsed shows time, expanded shows subject
+  const slotSubj = card.querySelector('.slot-subject');
+  if (slotSubj) {
+    const subj = subjectById(slots[index].subject_id);
+    slotSubj.textContent = !isHidden ? (slots[index].display_time || '00:00:00') : (subj ? subj.name : '—');
+  }
   el.querySelector('svg').innerHTML = isHidden ? '<path d="m18 15-6-6-6 6"/>' : '<path d="m6 9 6 6 6-6"/>';
 }
 
