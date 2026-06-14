@@ -334,8 +334,7 @@ function toggleCollapse(el, ev) {
 function renderTodayRecords() {
   const tbody = document.querySelector('#page-timer .records-table tbody');
   if (!tbody) return;
-  const todayRows = records.slice(0, 3);
-  tbody.innerHTML = todayRows.length ? todayRows.map(r => `<tr ondblclick="fillRecordToSlot(${r.id})"><td>${esc(r.subject_name || '—')}</td><td>${esc(r.description || '—')}</td><td style="text-align:right">${esc(r.duration || '0m')}</td></tr>`).join('') : '<tr><td>—</td><td>No records yet</td><td style="text-align:right">0m</td></tr>';
+  tbody.innerHTML = records.length ? records.map(r => `<tr ondblclick="fillRecordToSlot(${r.id})" data-id="${r.id}" data-subject="${attr(r.subject_name || '—')}" data-desc="${attr(r.description || '—')}" data-dur="${attr(r.duration || '0m')}"><td class="cell-subj">${esc(r.subject_name || '—')}</td><td class="cell-desc">${esc(r.description || '—')}</td><td class="cell-dur" style="text-align:right">${esc(r.duration || '0m')}</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted)">No records yet</td></tr>';
 }
 
 function fillRecordToSlot(id) {
@@ -511,20 +510,23 @@ async function addRecord() {
   const subjName = row.querySelector('.records-add-subject').value;
   const subj = subjects.find(s => s.name === subjName) || subjects[0];
   const desc = row.querySelector('.records-add-desc').value.trim() || '—';
-  const start = row.querySelector('.records-add-start').value;
-  const end = row.querySelector('.records-add-end').value;
+  const dur = row.querySelector('.records-add-duration').value.trim() || '0m';
   const date = document.getElementById('recordsDateField').value || todayIso();
   if (window.pywebview && window.pywebview.api) {
-    await window.pywebview.api.add_record(subj ? subj.id : 1, desc, `${date}T${start}:00`, `${date}T${end}:00`);
+    const now = new Date();
+    const end = now.toISOString().slice(0, 19);
+    const start = new Date(now - parseDurationS(dur) * 1000).toISOString().slice(0, 19);
+    await window.pywebview.api.add_record(subj ? subj.id : 1, desc, start, end);
     await loadRecords();
-  } else records.unshift({id: Date.now(), subject_id: subj?.id, subject_name: subjName, description: desc, start, end, duration: calcDur(start, end), date});
+  } else records.unshift({id: Date.now(), subject_id: subj?.id, subject_name: subjName, description: desc, duration: dur, date});
   row.querySelector('.records-add-desc').value = '';
+  row.querySelector('.records-add-duration').value = '';
   renderRecords(); renderTodayRecords();
 }
 
 function renderRecords() {
   const tbody = document.getElementById('recordsBody');
-  tbody.innerHTML = records.map(r => `<tr data-id="${r.id}" data-date="${attr(r.date || todayIso())}" data-subject="${attr(r.subject_name || '—')}" data-desc="${attr(r.description || '—')}" data-start="${attr(r.start || '')}" data-end="${attr(r.end || '')}" data-dur="${attr(r.duration || '0m')}" ondblclick="fillRecordToSlot(${r.id})"><td class="cell-date records-date-col">${esc(r.date || todayIso())}</td><td class="cell-subj">${esc(r.subject_name || '—')}</td><td class="cell-desc">${esc(r.description || '—')}</td><td class="cell-start">${esc(r.start || '')}</td><td class="cell-end">${esc(r.end || '')}</td><td class="cell-dur" style="text-align:right">${esc(r.duration || '0m')}</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>`).join('');
+  tbody.innerHTML = records.map(r => `<tr data-id="${r.id}" data-date="${attr(r.date || todayIso())}" data-subject="${attr(r.subject_name || '—')}" data-desc="${attr(r.description || '—')}" data-dur="${attr(r.duration || '0m')}" ondblclick="fillRecordToSlot(${r.id})"><td class="cell-date records-date-col">${esc(r.date || todayIso())}</td><td class="cell-subj">${esc(r.subject_name || '—')}</td><td class="cell-desc">${esc(r.description || '—')}</td><td class="cell-dur" style="text-align:right">${esc(r.duration || '0m')}</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>`).join('');
   document.getElementById('recordsCount').textContent = records.length;
 }
 
@@ -532,25 +534,26 @@ function editRecord(span) {
   const tr = span.closest('tr');
   if (tr.classList.contains('records-editing')) return;
   tr.classList.add('records-editing');
-  tr.querySelector('.cell-date').innerHTML = `<input type="date" value="${attr(tr.dataset.date)}">`;
+  const dateCell = tr.querySelector('.cell-date');
+  if (dateCell) dateCell.innerHTML = `<input type="date" value="${attr(tr.dataset.date)}">`;
   tr.querySelector('.cell-subj').innerHTML = `<select>${subjects.map(s => `<option${s.name === tr.dataset.subject ? ' selected' : ''}>${esc(s.name)}</option>`).join('')}</select>`;
   tr.querySelector('.cell-desc').innerHTML = `<input type="text" value="${attr(tr.dataset.desc)}">`;
-  tr.querySelector('.cell-start').innerHTML = `<input type="time" value="${attr(tr.dataset.start)}">`;
-  tr.querySelector('.cell-end').innerHTML = `<input type="time" value="${attr(tr.dataset.end)}">`;
+  tr.querySelector('.cell-dur').innerHTML = `<input type="text" value="${attr(tr.dataset.dur)}" placeholder="e.g. 1h 30m" style="width:80px">`;
   tr.querySelector('td:last-child').innerHTML = '<span class="edit-actions-inline"><span class="act save" onclick="saveEdit(this)" title="Save">✓</span><span class="act cancel" onclick="cancelEdit(this)" title="Cancel">✕</span></span>';
 }
 
 function saveEdit(span) {
   const tr = span.closest('tr');
-  const start = tr.querySelector('.cell-start input').value;
-  const end = tr.querySelector('.cell-end input').value;
-  Object.assign(tr.dataset, {date: tr.querySelector('.cell-date input').value, subject: tr.querySelector('.cell-subj select').value, desc: tr.querySelector('.cell-desc input').value, start, end, dur: calcDur(start, end)});
+  const dur = tr.querySelector('.cell-dur input').value;
+  const dateInput = tr.querySelector('.cell-date input');
+  const date = dateInput ? dateInput.value : tr.dataset.date;
+  Object.assign(tr.dataset, {date, subject: tr.querySelector('.cell-subj select').value, desc: tr.querySelector('.cell-desc input').value, dur});
   const r = records.find(x => Number(x.id) === Number(tr.dataset.id));
-  if (r) Object.assign(r, {date: tr.dataset.date, subject_name: tr.dataset.subject, description: tr.dataset.desc, start, end, duration: tr.dataset.dur});
-  renderRecords();
+  if (r) Object.assign(r, {date: tr.dataset.date, subject_name: tr.dataset.subject, description: tr.dataset.desc, duration: tr.dataset.dur});
+  renderRecords(); renderTodayRecords();
 }
 
-function cancelEdit() { renderRecords(); }
+function cancelEdit() { renderRecords(); renderTodayRecords(); }
 
 async function delRecord(span) {
   const id = Number(span.closest('tr').dataset.id);
@@ -645,4 +648,14 @@ function rgbToHex(value) {
   const m = String(value).match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
   if (!m) return value || '#5E6AD2';
   return '#' + [m[1], m[2], m[3]].map(n => Number(n).toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+function parseDurationS(dur) {
+  let total = 0;
+  const h = dur.match(/([\d.]+)\s*h/);
+  const m = dur.match(/(\d+)\s*m/);
+  if (h) total += parseFloat(h[1]) * 3600;
+  if (m) total += parseInt(m[1]) * 60;
+  if (!h && !m) { const n = parseFloat(dur); if (!isNaN(n)) total = n * 60; }
+  return Math.round(total);
 }

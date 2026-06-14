@@ -76,14 +76,13 @@
 
       <div class="card" style="margin-bottom:0;">
         <div class="records-header">Today's Records</div>
+        <div style="max-height:200px; overflow-y:auto;">
         <table class="records-table">
-          <thead><tr><th>Subject</th><th>Description</th><th style="text-align:right">Duration</th></tr></thead>
+          <thead><tr><th>Subject</th><th>Description</th><th style="text-align:right">Duration</th><th style="width:60px"></th></tr></thead>
           <tbody>
-            <tr><td>Code Review</td><td>PR #142 — auth module</td><td style="text-align:right">1h 30m</td></tr>
-            <tr><td>Design System</td><td>Token audit</td><td style="text-align:right">45m</td></tr>
-            <tr><td>Documentation</td><td>—</td><td style="text-align:right">1h 00m</td></tr>
           </tbody>
         </table>
+        </div>
       </div>
       </div>
 
@@ -152,13 +151,12 @@
             <option>Code Review</option><option>Design System</option><option>Documentation</option><option>Meeting</option><option>Research</option>
           </select>
           <input type="text" class="records-add-desc" placeholder="Description" style="flex:1.3;">
-          <input type="time" class="records-add-start" value="09:00">
-          <input type="time" class="records-add-end" value="10:00">
+          <input type="text" class="records-add-duration" placeholder="Duration (e.g. 1h 30m)" style="flex:0.6;">
           <button class="confirm-btn" onclick="addRecord()">✓</button>
         </div>
         <div class="records-scroll-wrap">
         <table class="records-table">
-            <thead><tr><th class="records-date-col">Date</th><th>Subject</th><th>Description</th><th>Start</th><th>End</th><th style="text-align:right">Duration</th><th style="width:60px"></th></tr></thead>
+            <thead><tr><th class="records-date-col">Date</th><th>Subject</th><th>Description</th><th style="text-align:right">Duration</th><th style="width:60px"></th></tr></thead>
             <tbody id="recordsBody">
               <tr data-date="2026-06-12" data-subject="Code Review" data-desc="PR #142 — auth module" data-start="09:30" data-end="11:00" data-dur="1h 30m"><td class="cell-date records-date-col">2026-06-12</td><td class="cell-subj">Code Review</td><td class="cell-desc">PR #142 — auth module</td><td class="cell-start">09:30</td><td class="cell-end">11:00</td><td class="cell-dur" style="text-align:right">1h 30m</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>
               <tr data-date="2026-06-12" data-subject="Design System" data-desc="Token audit" data-start="11:15" data-end="12:00" data-dur="45m"><td class="cell-date records-date-col">2026-06-12</td><td class="cell-subj">Design System</td><td class="cell-desc">Token audit</td><td class="cell-start">11:15</td><td class="cell-end">12:00</td><td class="cell-dur" style="text-align:right">45m</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>
