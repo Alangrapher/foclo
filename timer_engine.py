@@ -6,7 +6,7 @@ No threads. State persisted to slot_state table for crash recovery.
 from __future__ import annotations
 
 import time
-from database import get_conn
+from app.storage import get_conn
 
 
 class TimerSlot:
