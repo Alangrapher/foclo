@@ -538,13 +538,14 @@ function editRecord(span) {
   if (dateCell) dateCell.innerHTML = `<input type="date" value="${attr(tr.dataset.date)}">`;
   tr.querySelector('.cell-subj').innerHTML = `<select>${subjects.map(s => `<option${s.name === tr.dataset.subject ? ' selected' : ''}>${esc(s.name)}</option>`).join('')}</select>`;
   tr.querySelector('.cell-desc').innerHTML = `<input type="text" value="${attr(tr.dataset.desc)}">`;
-  tr.querySelector('.cell-dur').innerHTML = `<input type="text" value="${attr(tr.dataset.dur)}" placeholder="e.g. 1h 30m" style="width:80px">`;
+  tr.querySelector('.cell-dur').innerHTML = `<input type="text" value="${(tr.dataset.dur || '0').replace(/h$/, '')}" placeholder="e.g. 1.5" style="width:80px">`;
   tr.querySelector('td:last-child').innerHTML = '<span class="edit-actions-inline"><span class="act save" onclick="saveEdit(this)" title="Save">✓</span><span class="act cancel" onclick="cancelEdit(this)" title="Cancel">✕</span></span>';
 }
 
 function saveEdit(span) {
   const tr = span.closest('tr');
-  const dur = tr.querySelector('.cell-dur input').value;
+  let dur = tr.querySelector('.cell-dur input').value.replace(/h$/, '');
+  dur = (parseFloat(dur) || 0).toFixed(1) + 'h';
   const dateInput = tr.querySelector('.cell-date input');
   const date = dateInput ? dateInput.value : tr.dataset.date;
   Object.assign(tr.dataset, {date, subject: tr.querySelector('.cell-subj select').value, desc: tr.querySelector('.cell-desc input').value, dur});
@@ -656,6 +657,6 @@ function parseDurationS(dur) {
   const m = dur.match(/(\d+)\s*m/);
   if (h) total += parseFloat(h[1]) * 3600;
   if (m) total += parseInt(m[1]) * 60;
-  if (!h && !m) { const n = parseFloat(dur); if (!isNaN(n)) total = n * 60; }
+  if (!h && !m) { const n = parseFloat(dur); if (!isNaN(n)) total = n * 3600; }
   return Math.round(total);
 }

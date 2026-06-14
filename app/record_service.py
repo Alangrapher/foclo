@@ -27,11 +27,8 @@ def get_records(filter: str = "today") -> list[dict]:
     conn.close()
 
     def fmt_dur(sec: int) -> str:
-        h, m = divmod(sec, 3600)
-        m, s = divmod(m, 60)
-        if h:
-            return f"{h}h {m}m"
-        return f"{m}m"
+        h = sec / 3600
+        return f"{h:.1f}h"
 
     return [
         {
