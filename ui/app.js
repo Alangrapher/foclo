@@ -83,9 +83,19 @@ function bindStaticControls() {
     btn.classList.add('active');
   }));
   const exportButton = document.querySelector('#page-export .btn-primary');
-  if (exportButton) exportButton.addEventListener('click', () => {
-    lastExport = new Date().toLocaleString([], {hour: '2-digit', minute: '2-digit', year: 'numeric', month: 'short', day: 'numeric'});
-    document.querySelector('#page-export .page-sub').textContent = 'Last export: ' + lastExport;
+  if (exportButton) exportButton.addEventListener('click', async () => {
+    const start = document.getElementById('export-start').value;
+    const end = document.getElementById('export-end').value;
+    const fmtBtn = document.querySelector('#export-format-group .btn-secondary.active');
+    const format = fmtBtn ? fmtBtn.dataset.format : 'xlsx';
+
+    try {
+      const result = await window.pywebview.api.export_timesheet(start, end, format);
+      lastExport = new Date().toLocaleString([], {hour: '2-digit', minute: '2-digit', year: 'numeric', month: 'short', day: 'numeric'});
+      document.querySelector('#page-export .page-sub').textContent = 'Last export: ' + lastExport + ' → ' + result.path;
+    } catch (e) {
+      document.querySelector('#page-export .page-sub').textContent = 'Export failed: ' + (e.message || e);
+    }
   });
   document.getElementById('quitKeepBtn').addEventListener('click', quitPause);
   document.getElementById('quitArchiveBtn').addEventListener('click', quitArchive);

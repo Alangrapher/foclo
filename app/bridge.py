@@ -167,3 +167,17 @@ class Api:
 
     def update_setting(self, key: str, value: str):
         return update_setting(key, value)
+
+    # ── Export ──────────────────────────────────────────
+
+    def export_timesheet(self, start: str = "", end: str = "", format: str = "xlsx"):
+        from app.export_service import export_timesheet
+        from datetime import date
+        today = date.today().isoformat()
+        s_str = start or today
+        e_str = end or today
+        sd = date.fromisoformat(s_str) if s_str else None
+        ed = date.fromisoformat(e_str) if e_str else None
+        path = f"/tmp/alangrapher_export_{s_str}_{e_str}.xlsx"
+        result = export_timesheet(path, start_date=sd, end_date=ed)
+        return {"ok": True, "path": result}
