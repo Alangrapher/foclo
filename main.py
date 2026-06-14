@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import os
 import webview
-from api import Api
-from database import init_db
+from app.bridge import Api
+from app.storage import init_db
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 UI_DIR = os.path.join(PROJECT_DIR, "ui")

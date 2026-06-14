@@ -1,10 +1,10 @@
-"""SQLite database — per DECISIONS.md schema."""
+"""Storage layer — SQLite database connection and settings helpers."""
 from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
 
-DB_PATH = Path(__file__).resolve().parent / "data" / "alangrapher.db"
+DB_PATH = Path(__file__).resolve().parent.parent / "data" / "alangrapher.db"
 
 
 def get_conn() -> sqlite3.Connection:
@@ -62,7 +62,6 @@ def init_db():
             started_at  REAL
         );
 
-        -- Default settings
         INSERT OR IGNORE INTO settings (key, value) VALUES
             ('default_slots', '3'),
             ('week_starts_on', 'Monday'),
@@ -71,13 +70,11 @@ def init_db():
             ('backup_location', ''),
             ('minimize_to_tray', '1');
 
-        -- Default subjects
         INSERT OR IGNORE INTO subjects (id, name, color) VALUES
             (1, 'Code Review', '#5E6AD2'),
             (2, 'Writing', '#34C98B'),
             (3, 'Design', '#F0B73F');
 
-        -- Default slot state
         INSERT OR IGNORE INTO slot_state (slot_index) VALUES (0), (1), (2);
     """)
     conn.commit()
