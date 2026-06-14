@@ -28,6 +28,16 @@ class Api:
         self.window.resize(int(width), int(height))
         return {"ok": True, "width": int(width), "height": int(height)}
 
+    def quit_app(self):
+        if self.window:
+            self.window.destroy()
+        return {"ok": True}
+
+    def minimize_window(self):
+        if self.window:
+            self.window.minimize()
+        return {"ok": True}
+
     def tick(self):
         pass
 

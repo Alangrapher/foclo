@@ -47,7 +47,10 @@
           <div class="page-title">Timer</div>
           <div class="page-sub">Today · 2026-06-12 &nbsp; Week 24 (Mon–Fri)</div>
         </div>
-        <button class="btn btn-secondary btn-sm" id="compactBtn" title="Compact mode"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 15 6 6m-6-6v4.8m0-4.8h4.8"/><path d="M9 19.8V15m0 0H4.2M9 15l-6 6"/><path d="M15 4.2V9m0 0h4.8M15 9l6-6"/><path d="M9 4.2V9m0 0H4.2M9 9 3 3"/></svg></button>
+        <div class="header-actions">
+          <button class="btn btn-secondary btn-sm" id="compactBtn" title="Compact mode"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 15 6 6m-6-6v4.8m0-4.8h4.8"/><path d="M9 19.8V15m0 0H4.2M9 15l-6 6"/><path d="M15 4.2V9m0 0h4.8M15 9l6-6"/><path d="M9 4.2V9m0 0H4.2M9 9 3 3"/></svg></button>
+          <button class="btn btn-secondary btn-sm btn-close" id="closeBtn" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></button>
+        </div>
       </div>
 
       <div class="card">
@@ -218,14 +221,10 @@
         <div class="settings-list">
           <div class="setting-row">
             <div class="setting-info"><div class="setting-label">Week starts on</div><div class="setting-desc">First day of the week for tracking</div></div>
-            <select class="form-select" style="width:100px;"><option>Monday</option><option>Sunday</option></select>
+            <select class="form-select" id="weekStartSelect" style="width:100px;"><option value="sun">Sunday</option><option value="mon">Monday</option></select>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Compact by default</div><div class="setting-desc">Start in compact floating mode</div></div>
-            <label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label>
-          </div>
-          <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Default Slots</div><div class="setting-desc">Number of concurrent timer slots</div></div>
+            <div class="setting-info"><div class="setting-label">Default Slots</div><div class="setting-desc">Number of concurrent timer slots (restart to apply)</div></div>
             <select class="form-select" style="width:80px;"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
           </div>
           <div class="setting-row">
@@ -238,7 +237,7 @@
           </div>
           <div class="setting-row">
             <div class="setting-info"><div class="setting-label">Minimize to Tray</div><div class="setting-desc">Close window sends to system tray</div></div>
-            <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            <label class="toggle"><input type="checkbox" id="minimizeTrayToggle" checked><span class="toggle-slider"></span></label>
           </div>
           <div class="setting-row" style="border-bottom:none;">
             <div class="setting-info"><div class="setting-label" style="color:var(--danger);">Reset All Data</div><div class="setting-desc">Permanently delete all records, todos, subjects, and settings</div></div>

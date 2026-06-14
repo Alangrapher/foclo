@@ -3,6 +3,7 @@ const proto = document.getElementById('prototype');
 const compactBtn = document.getElementById('compactBtn');
 const expandBtn = document.getElementById('expandBtn');
 const darkToggle = document.getElementById('darkToggle');
+const closeBtn = document.getElementById('closeBtn');
 const modal = document.getElementById('easterEggModal');
 const trigger = document.getElementById('easterEggTrigger');
 
@@ -16,6 +17,8 @@ let todos = [];
 let records = [];
 let recordsFilter = 'today';
 let compactIndex = 0;
+let weekStart = 'sun'; // 'sun' or 'mon'
+let minimizeToTray = true;
 let isDark = false;
 let isMoss = false;
 let clickCount = 0;
@@ -48,6 +51,9 @@ function bindStaticControls() {
   document.querySelectorAll('.nav-item[data-page]').forEach(item => item.addEventListener('click', () => switchPage(item.dataset.page)));
   compactBtn.addEventListener('click', enterCompact);
   expandBtn.addEventListener('click', exitCompact);
+  closeBtn.addEventListener('click', () => { 
+    if (pyApi) minimizeToTray ? pyApi.minimize_window() : pyApi.quit_app(); 
+  });
   darkToggle.addEventListener('click', toggleThemeClick);
   trigger.addEventListener('click', () => modal.classList.add('show'));
   modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
@@ -69,7 +75,7 @@ function bindStaticControls() {
 
 async function loadAll() {
   if (!window.pywebview || !window.pywebview.api) return;
-  await Promise.all([loadSubjects(), loadSlots(), loadTodos(), loadRecords()]);
+  await Promise.all([loadSubjects(), loadSlots(), loadTodos(), loadRecords(), loadSettings()]);
   renderAll();
 }
 
@@ -99,6 +105,12 @@ async function loadTodos() {
 
 async function loadRecords() {
   records = await window.pywebview.api.get_records(recordsFilter);
+}
+
+async function loadSettings() {
+  const s = await window.pywebview.api.get_settings();
+  minimizeToTray = s.minimize_to_tray === '1';
+  weekStart = s.week_starts_on === 'Monday' ? 'mon' : 'sun';
 }
 
 async function refreshClocks() {
@@ -354,16 +366,17 @@ function fillRecordToSlot(id) {
 function updateTiles() {
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
-  const dayOfWeek = now.getDay(); // 0=Sun
-  const sun = new Date(now); sun.setDate(now.getDate() - dayOfWeek);
-  const sunStr = sun.toISOString().slice(0, 10);
+  const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  const offset = weekStart === 'mon' ? (dayOfWeek === 0 ? 6 : dayOfWeek - 1) : dayOfWeek;
+  const weekStartDate = new Date(now); weekStartDate.setDate(now.getDate() - offset);
+  const weekStartStr = weekStartDate.toISOString().slice(0, 10);
 
   let todayH = 0, weekH = 0;
   records.forEach(r => {
     const h = parseFloat((r.duration || '0').replace(/h$/, '')) || 0;
     const d = r.date || '';
     if (d === todayStr) todayH += h;
-    if (d >= sunStr && d <= todayStr) weekH += h;
+    if (d >= weekStartStr && d <= todayStr) weekH += h;
   });
 
   const vals = document.querySelectorAll('#page-timer .tile-value');
@@ -651,6 +664,22 @@ async function quickAddSubject() {
 }
 
 function renderSettings() {
+  const wsSelect = document.getElementById('weekStartSelect');
+  if (wsSelect) {
+    wsSelect.value = weekStart;
+    wsSelect.addEventListener('change', () => {
+      weekStart = wsSelect.value;
+      updateTiles();
+    });
+  }
+  const mtToggle = document.getElementById('minimizeTrayToggle');
+  if (mtToggle) {
+    mtToggle.checked = minimizeToTray;
+    mtToggle.addEventListener('change', async () => {
+      minimizeToTray = mtToggle.checked;
+      if (window.pywebview && window.pywebview.api) await window.pywebview.api.update_setting('minimize_to_tray', minimizeToTray ? '1' : '0');
+    });
+  }
   document.querySelectorAll('#page-settings .form-select')[1]?.addEventListener('change', async e => {
     if (window.pywebview && window.pywebview.api) await window.pywebview.api.update_setting('default_slots', e.target.value);
   });
