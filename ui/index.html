@@ -96,8 +96,8 @@
 
         <!-- Inline add — subject + description -->
         <div style="display:flex;align-items:center;gap:6px;padding:6px 4px;margin-bottom:8px;border-bottom:1px solid var(--border);">
-          <span style="color:var(--muted);font-size:13px;flex-shrink:0;">+</span>
-          <input id="todoSubject" placeholder="Subject" style="flex:1;background:transparent;border:none;padding:6px 4px;font-size:13px;color:var(--text);outline:none;border-bottom:1px solid transparent;" onfocus="this.style.borderBottomColor='var(--accent)'" onblur="this.style.borderBottomColor='transparent'" onkeydown="if(event.key==='Enter')addTodo()">
+          <select id="todoSubject" style="flex:1;background:transparent;border:none;padding:6px 4px;font-size:13px;color:var(--text);outline:none;border-bottom:1px solid transparent;max-width:160px;" onkeydown="if(event.key==='Enter')addTodo()"><option value="">— Select —</option></select>
+          <button onclick="quickAddSubject()" title="Add subject" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:4px 6px;line-height:1;">+</button>
           <input id="todoDesc" placeholder="Description (optional)" style="flex:2;background:transparent;border:none;padding:6px 4px;font-size:12px;color:var(--text2);outline:none;border-bottom:1px solid transparent;" onfocus="this.style.borderBottomColor='var(--accent)'" onblur="this.style.borderBottomColor='transparent'" onkeydown="if(event.key==='Enter')addTodo()">
           <button class="btn btn-primary btn-sm" onclick="addTodo()" style="padding:4px 10px;font-size:11px;border-radius:6px;">✓</button>
         </div>
@@ -280,6 +280,18 @@
       <button class="btn btn-secondary" style="flex:1;" onclick="closeRemoveSlotModal()">Cancel</button>
       <button class="btn btn-primary" style="flex:1;" onclick="archiveThenRemove()">Archive</button>
       <button class="btn btn-sm" style="flex:1;background:var(--danger);color:#fff;font-weight:600;cursor:pointer;border:none;border-radius:8px;padding:8px 14px;font-size:12px;" onclick="clearAndRemove()">Clear</button>
+    </div>
+  </div>
+</div>
+
+<!-- Quick-add subject modal -->
+<div class="modal-overlay" id="quickAddSubjectModal">
+  <div class="modal-card" style="width:340px;text-align:center;">
+    <div class="modal-title" style="font-size:16px;margin-bottom:14px;">New Subject</div>
+    <input id="quickAddSubjectInput" placeholder="Subject name" style="width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--border);border-radius:8px;outline:none;color:var(--text);background:var(--bg);margin-bottom:18px;box-sizing:border-box;" onkeydown="if(event.key==='Enter')submitQuickAddSubject()">
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button class="btn btn-secondary" style="flex:1;" onclick="closeQuickAddSubjectModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="submitQuickAddSubject()">Add</button>
     </div>
   </div>
 </div>

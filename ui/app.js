@@ -53,7 +53,9 @@ function bindStaticControls() {
   modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
   const removeSlotModal = document.getElementById('removeSlotModal');
   removeSlotModal.addEventListener('click', e => { if (e.target === removeSlotModal) closeRemoveSlotModal(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') { modal.classList.remove('show'); closeRemoveSlotModal(); } });
+  const quickAddModal = document.getElementById('quickAddSubjectModal');
+  quickAddModal.addEventListener('click', e => { if (e.target === quickAddModal) closeQuickAddSubjectModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { modal.classList.remove('show'); closeRemoveSlotModal(); closeQuickAddSubjectModal(); } });
   document.querySelectorAll('#page-export .btn-secondary').forEach(btn => btn.addEventListener('click', () => {
     document.querySelectorAll('#page-export .btn-secondary').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
@@ -350,9 +352,23 @@ function fillRecordToSlot(id) {
 }
 
 function updateTiles() {
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const dayOfWeek = now.getDay(); // 0=Sun
+  const sun = new Date(now); sun.setDate(now.getDate() - dayOfWeek);
+  const sunStr = sun.toISOString().slice(0, 10);
+
+  let todayH = 0, weekH = 0;
+  records.forEach(r => {
+    const h = parseFloat((r.duration || '0').replace(/h$/, '')) || 0;
+    const d = r.date || '';
+    if (d === todayStr) todayH += h;
+    if (d >= sunStr && d <= todayStr) weekH += h;
+  });
+
   const vals = document.querySelectorAll('#page-timer .tile-value');
-  if (vals[0]) vals[0].textContent = records.length ? records[0].duration : '0m';
-  if (vals[1]) vals[1].textContent = records.length + ' records';
+  if (vals[0]) vals[0].textContent = todayH.toFixed(1) + 'h';
+  if (vals[1]) vals[1].textContent = weekH.toFixed(1) + 'h';
 }
 
 let _lastCompactKey = '';
@@ -452,14 +468,14 @@ function updateDarkButton() {
 }
 
 async function addTodo() {
-  const subjInput = document.getElementById('todoSubject');
+  const subjSelect = document.getElementById('todoSubject');
   const descInput = document.getElementById('todoDesc');
-  const subject = subjInput.value.trim();
+  const subject = subjSelect.value;
   if (!subject) return;
   const description = descInput.value.trim();
   if (window.pywebview && window.pywebview.api) { await window.pywebview.api.add_todo(subject, description); await loadTodos(); }
   else todos.push({id: Date.now(), subject, description, status: 'pending'});
-  subjInput.value = ''; descInput.value = ''; renderTodos();
+  subjSelect.value = ''; descInput.value = ''; renderTodos();
 }
 
 async function toggleTodo(arg) {
@@ -580,6 +596,8 @@ function renderSubjects() {
   list.innerHTML = subjects.map(s => `<div class="subject-row" data-id="${s.id}"><span class="subject-dot" style="background:${s.color};"></span><span class="subject-name">${esc(s.name)}</span><span class="subject-actions"><span class="act" onclick="editSubject(this)">✎</span><span class="act" onclick="delSubject(this)">🗑</span></span></div>`).join('');
   const addSelect = document.querySelector('.records-add-subject');
   if (addSelect) addSelect.innerHTML = subjects.map(s => `<option>${esc(s.name)}</option>`).join('');
+  const todoSelect = document.getElementById('todoSubject');
+  if (todoSelect) todoSelect.innerHTML = '<option value="">— Select —</option>' + subjects.map(s => `<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('');
   document.querySelector('#page-subjects .page-sub').textContent = `${subjects.length} subjects — manage your activity categories`;
 }
 
@@ -606,6 +624,30 @@ async function delSubject(span) {
   if (window.pywebview && window.pywebview.api) { await window.pywebview.api.delete_subject(id); await loadSubjects(); }
   else subjects = subjects.filter(s => Number(s.id) !== id);
   renderSubjects(); renderTimer();
+}
+
+function openQuickAddSubjectModal() {
+  document.getElementById('quickAddSubjectInput').value = '';
+  document.getElementById('quickAddSubjectModal').classList.add('show');
+  setTimeout(() => document.getElementById('quickAddSubjectInput').focus(), 100);
+}
+
+function closeQuickAddSubjectModal() {
+  document.getElementById('quickAddSubjectModal').classList.remove('show');
+}
+
+async function submitQuickAddSubject() {
+  const input = document.getElementById('quickAddSubjectInput');
+  const name = input.value.trim();
+  if (!name) return;
+  if (window.pywebview && window.pywebview.api) { await window.pywebview.api.add_subject(name, '#5E6AD2'); await loadSubjects(); }
+  else subjects.push({id: Date.now(), name, color: '#5E6AD2'});
+  closeQuickAddSubjectModal();
+  renderSubjects(); renderTimer();
+}
+
+async function quickAddSubject() {
+  openQuickAddSubjectModal();
 }
 
 function renderSettings() {
