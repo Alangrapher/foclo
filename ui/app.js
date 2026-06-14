@@ -11,7 +11,7 @@ let subjects = [
   {id: 2, name: 'Writing', color: '#34C98B'},
   {id: 3, name: 'Design', color: '#F0B73F'}
 ];
-let slots = [{index: 0, status: 'idle', subject_id: null, description: '', display_time: '00:00:00'}];
+let slots = [{index: 0, status: 'idle', subject_id: null, description: '', display_time: '00:00:00', collapsed: false}];
 let todos = [];
 let records = [];
 let recordsFilter = 'today';
@@ -51,7 +51,9 @@ function bindStaticControls() {
   darkToggle.addEventListener('click', toggleThemeClick);
   trigger.addEventListener('click', () => modal.classList.add('show'));
   modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') modal.classList.remove('show'); });
+  const removeSlotModal = document.getElementById('removeSlotModal');
+  removeSlotModal.addEventListener('click', e => { if (e.target === removeSlotModal) closeRemoveSlotModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { modal.classList.remove('show'); closeRemoveSlotModal(); } });
   document.querySelectorAll('#page-export .btn-secondary').forEach(btn => btn.addEventListener('click', () => {
     document.querySelectorAll('#page-export .btn-secondary').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
@@ -75,7 +77,8 @@ async function loadSubjects() {
 
 async function loadSlots() {
   slots = await window.pywebview.api.get_all_slots();
-  if (!slots.length) slots = [{index: 0, status: 'idle', subject_id: null, description: '', display_time: '00:00:00'}];
+  if (!slots.length) slots = [{index: 0, status: 'idle', subject_id: null, description: '', display_time: '00:00:00', collapsed: false}];
+  slots.forEach(s => { if (s.collapsed === undefined) s.collapsed = false; });
   compactIndex = Math.min(compactIndex, slots.length - 1);
 }
 
@@ -90,13 +93,29 @@ async function loadRecords() {
 async function refreshClocks() {
   if (window.pywebview && window.pywebview.api) {
     await loadSlots();
-    renderTimer();
-    renderCompact();
   } else {
     tickLocalSlots();
-    renderTimer();
-    renderCompact();
   }
+  updateTimerCards();
+  renderCompact();
+}
+
+function updateTimerCards() {
+  slots.forEach(slot => {
+    const card = document.querySelector(`.timer-slot-card[data-slot="${slot.index}"]`);
+    if (!card) return;
+    const clock = card.querySelector('.timer-clock');
+    if (clock) clock.textContent = slot.display_time || '00:00:00';
+    const subj = subjectById(slot.subject_id);
+    const subjectEl = card.querySelector('.timer-subject-line');
+    if (subjectEl) subjectEl.textContent = `${subj ? subj.name : '—'}${slot.description ? ' — ' + slot.description : ''}`;
+    const badge = card.querySelector('.badge');
+    const status = slot.status || 'idle';
+    if (badge) {
+      badge.className = `badge ${status}`;
+      badge.innerHTML = `<span class="dot"></span> ${status[0].toUpperCase() + status.slice(1)}`;
+    }
+  });
 }
 
 function renderAll() {
@@ -147,15 +166,15 @@ function timerCard(slot) {
       <span class="slot-label">Timer ${index + 1}</span>
       <span class="badge ${status}"><span class="dot"></span> ${label}</span>
       <span class="slot-subject">${subj ? esc(subj.name) : '—'}</span>
-      <span class="slot-collapse" onclick="toggleCollapse(this)" style="color:var(--muted);cursor:pointer;font-size:13px;"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
-      ${slots.length > 1 ? `<span onclick="removeSlot(${index})" style="color:var(--muted);cursor:pointer;font-size:11px;"><svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>` : ''}
+      <span class="slot-collapse" onclick="toggleCollapse(this)" style="color:var(--muted);cursor:pointer;font-size:13px;"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${slot.collapsed ? '<path d="m6 9 6 6 6-6"/>' : '<path d="m18 15-6-6-6 6"/>'}</svg></span>
+      ${slots.length > 1 ? `<span onclick="confirmRemoveSlot(${index})" style="color:var(--muted);cursor:pointer;font-size:11px;"><svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>` : ''}
       ${slots.length < 5 ? `<button class="add-slot-btn" title="Add timer slot (max 5)" onclick="addSlot()"><svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>` : ''}
     </div>
-    <div class="timer-clock">${slot.display_time || '00:00:00'}</div>
-    <div class="timer-subject-line">${subj ? esc(subj.name) : '—'}${slot.description ? ' — ' + esc(slot.description) : ''}</div>
-    <div class="form-row"><div class="form-label">Subject</div><div class="select-wrapper"><select class="form-select" onchange="setSlotSubject(${index}, this.value)">${subjectOptions(slot.subject_id)}</select></div></div>
-    <div class="form-row"><div class="form-label">Description (optional)</div><input class="form-input" placeholder="What are you working on?" value="${attr(slot.description || '')}" oninput="setSlotDescription(${index}, this.value)"></div>
-    <div class="btn-row">
+    <div class="timer-clock"${slot.collapsed ? ' style="display:none"' : ''}>${slot.display_time || '00:00:00'}</div>
+    <div class="timer-subject-line"${slot.collapsed ? ' style="display:none"' : ''}>${subj ? esc(subj.name) : '—'}${slot.description ? ' — ' + esc(slot.description) : ''}</div>
+    <div class="form-row"${slot.collapsed ? ' style="display:none"' : ''}><div class="form-label">Subject</div><div class="select-wrapper"><select class="form-select" onchange="setSlotSubject(${index}, this.value)">${subjectOptions(slot.subject_id)}</select></div></div>
+    <div class="form-row"${slot.collapsed ? ' style="display:none"' : ''}><div class="form-label">Description (optional)</div><input class="form-input" placeholder="What are you working on?" value="${attr(slot.description || '')}" oninput="setSlotDescription(${index}, this.value)"></div>
+    <div class="btn-row"${slot.collapsed ? ' style="display:none"' : ''}>
       <button class="btn btn-primary" style="flex:1;" onclick="primaryTimerAction(${index})"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${iconPath}</svg>${actionText}</button>
       <button class="btn btn-secondary" style="flex:1;" onclick="archiveSlot(${index})"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 15h18"/><path d="m15 8-3 3-3-3"/></svg>Archive</button>
     </div>`;
@@ -209,7 +228,7 @@ async function archiveSlot(index) {
 async function addSlot() {
   if (slots.length >= 5) return;
   if (window.pywebview && window.pywebview.api) { await window.pywebview.api.add_slot(); await loadSlots(); }
-  else slots.push({index: slots.length, status: 'idle', subject_id: null, description: '', display_time: '00:00:00'});
+  else slots.push({index: slots.length, status: 'idle', subject_id: null, description: '', display_time: '00:00:00', collapsed: false});
   renderTimer(); renderCompact();
 }
 
@@ -221,22 +240,64 @@ async function removeSlot(index) {
   renderTimer(); renderCompact();
 }
 
+let pendingRemoveSlot = null;
+
+function confirmRemoveSlot(index) {
+  const slot = slots[index];
+  if (!slot || (slot.status !== 'running' && slot.status !== 'paused')) {
+    removeSlot(index);
+    return;
+  }
+  pendingRemoveSlot = index;
+  const card = document.querySelector(`.timer-slot-card[data-slot="${index}"]`);
+  const subj = subjectById(slot.subject_id);
+  const name = subj ? subj.name : 'this timer';
+  const modal = document.getElementById('removeSlotModal');
+  modal.querySelector('.remove-slot-msg').textContent = `Timer is ${slot.status}. Close "${name}"?`;
+  modal.classList.add('show');
+}
+
+function closeRemoveSlotModal() {
+  document.getElementById('removeSlotModal').classList.remove('show');
+  pendingRemoveSlot = null;
+}
+
+async function archiveThenRemove() {
+  const index = pendingRemoveSlot;
+  if (index === null || index === undefined) return;
+  await archiveSlot(index);
+  closeRemoveSlotModal();
+}
+
+async function clearAndRemove() {
+  const index = pendingRemoveSlot;
+  if (index === null || index === undefined) return;
+  await removeSlot(index);
+  closeRemoveSlotModal();
+}
+
 function setSlotSubject(index, value) {
   slots[index].subject_id = Number(value) || null;
+  updateTimerCards();
   renderCompact();
 }
 
 function setSlotDescription(index, value) {
   slots[index].description = value;
   if (window.pywebview && window.pywebview.api) window.pywebview.api.set_description(index, value);
+  updateTimerCards();
   renderCompact();
 }
 
-function toggleCollapse(el) {
+function toggleCollapse(el, ev) {
+  if (ev) ev.stopPropagation();
   const card = el.closest('.card');
-  const hidden = card.querySelector('.timer-clock').style.display === 'none';
-  card.querySelectorAll('.timer-clock,.timer-subject-line,.form-row,.btn-row').forEach(x => x.style.display = hidden ? '' : 'none');
-  el.querySelector('svg').innerHTML = hidden ? '<path d="m6 9 6 6 6-6"/>' : '<path d="m18 15-6-6-6 6"/>';
+  const index = Number(card.dataset.slot);
+  const clock = card.querySelector('.timer-clock');
+  const isHidden = clock.style.display === 'none';
+  slots[index].collapsed = !isHidden;
+  card.querySelectorAll('.timer-clock,.timer-subject-line,.form-row,.btn-row').forEach(x => x.style.display = isHidden ? '' : 'none');
+  el.querySelector('svg').innerHTML = isHidden ? '<path d="m18 15-6-6-6 6"/>' : '<path d="m6 9 6 6 6-6"/>';
 }
 
 function renderTodayRecords() {
@@ -273,7 +334,11 @@ function renderCompact() {
   panel.querySelector('.compact-top').innerHTML = `<span class="badge ${status}"><span class="dot"></span> ${status[0].toUpperCase() + status.slice(1)}</span>`;
   panel.querySelector('.compact-slot-indicator').textContent = `${compactIndex + 1} / ${slots.length}`;
   panel.querySelector('.compact-clock').textContent = slot.display_time || '00:00:00';
-  panel.querySelector('.compact-subject').textContent = `${subj ? subj.name : '—'}${slot.description ? ' — ' + slot.description : ''}`;
+  const subjText = subj ? subj.name : '';
+  const desc = slot.description ? ' — ' + slot.description : '';
+  const combined = subjText + desc;
+  panel.querySelector('.compact-subject').textContent = combined || '';
+  panel.querySelector('.compact-subject').style.display = combined ? '' : 'none';
   const arrows = panel.querySelectorAll('.arrow');
   arrows[0].style.visibility = 'visible';
   arrows[1].style.visibility = 'visible';
@@ -290,23 +355,29 @@ function renderCompact() {
   panel.querySelector('.compact-actions').innerHTML = `<button class="btn btn-primary" onclick="primaryTimerAction(${slot.index})"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>${action}</button><button class="btn btn-secondary" onclick="archiveSlot(${slot.index})"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 15h18"/><path d="m15 8-3 3-3-3"/></svg>Archive</button>`;
 }
 
-async function enterCompact() {
+function enterCompact() {
+  document.documentElement.classList.add('showing-compact');
   proto.classList.add('showing-compact');
   document.querySelector('.sidebar').style.display = 'none';
   document.querySelector('.content').style.display = 'none';
   const cp = document.getElementById('compactPanel');
   cp.style.display = 'flex';
   renderCompact();
-  if (pyApi && pyApi.resize_window) await pyApi.resize_window(300, 186);
+  if (pyApi && pyApi.resize_window) pyApi.resize_window(320, 210);
 }
 
-async function exitCompact() {
+function exitCompact() {
+  document.documentElement.classList.remove('showing-compact');
   proto.classList.remove('showing-compact');
   document.querySelector('.sidebar').style.display = '';
   document.querySelector('.content').style.display = '';
   const cp = document.getElementById('compactPanel');
   cp.style.display = '';
-  if (pyApi && pyApi.resize_window) await pyApi.resize_window(760, 620);
+  cp.style.position = '';
+  cp.style.top = '';
+  cp.style.left = '';
+  cp.style.transform = '';
+  if (pyApi && pyApi.resize_window) pyApi.resize_window(760, 620);
 }
 
 function switchPage(name) {

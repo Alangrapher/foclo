@@ -156,19 +156,35 @@ body {
 .prototype.showing-compact .sidebar { display: none; }
 .prototype.showing-compact .content { display: none; }
 
+html.showing-compact .window {
+  width: 100vw; height: 100vh;
+  border-radius: 0; border: none; box-shadow: none;
+}
+html.showing-compact body {
+  background: var(--card);
+}
+
 /* Compact panel — standalone mini window */
 .compact-panel {
   display: none; flex-direction: column; align-items: center; justify-content: center;
   width: 300px; height: 186px; background: var(--card); border: 1px solid var(--border);
   border-radius: 14px; padding: 14px 24px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-  z-index: 200;
+  z-index: 200; position: relative;
 }
-.prototype.showing-compact { display: flex !important; overflow: hidden; }
+.prototype.showing-compact { display: flex !important; overflow: hidden; justify-content: center; align-items: center; }
 .prototype.showing-compact .compact-panel {
   display: flex !important;
-  position: static;
-  height: 100%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 300px;
+  height: 186px;
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  border: 1px solid var(--border);
+  padding: 14px 24px;
 }
 .compact-top { display: flex; align-items: center; margin-top: auto; margin-bottom: 10px; }
 .compact-clock { font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 700; color: var(--text); text-align: center; letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums; }
