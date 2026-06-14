@@ -6,6 +6,7 @@ const darkToggle = document.getElementById('darkToggle');
 const closeBtn = document.getElementById('closeBtn');
 const modal = document.getElementById('easterEggModal');
 const trigger = document.getElementById('easterEggTrigger');
+const quitModal = document.getElementById('quitConfirmModal');
 
 let subjects = [
   {id: 1, name: 'Code Review', color: '#5E6AD2'},
@@ -51,8 +52,22 @@ function bindStaticControls() {
   document.querySelectorAll('.nav-item[data-page]').forEach(item => item.addEventListener('click', () => switchPage(item.dataset.page)));
   compactBtn.addEventListener('click', enterCompact);
   expandBtn.addEventListener('click', exitCompact);
-  closeBtn.addEventListener('click', () => { 
-    if (pyApi) minimizeToTray ? pyApi.minimize_window() : pyApi.quit_app(); 
+  closeBtn.addEventListener('click', async () => { 
+    if (!pyApi) return;
+    if (minimizeToTray) {
+      pyApi.hide_window();
+    } else {
+      try {
+        const active = await pyApi.any_slot_active();
+        if (!active) {
+          pyApi.quit_app();
+        } else {
+          showQuitModal();
+        }
+      } catch (e) {
+        pyApi.quit_app();
+      }
+    }
   });
   darkToggle.addEventListener('click', toggleThemeClick);
   trigger.addEventListener('click', () => modal.classList.add('show'));
@@ -61,7 +76,8 @@ function bindStaticControls() {
   removeSlotModal.addEventListener('click', e => { if (e.target === removeSlotModal) closeRemoveSlotModal(); });
   const quickAddModal = document.getElementById('quickAddSubjectModal');
   quickAddModal.addEventListener('click', e => { if (e.target === quickAddModal) closeQuickAddSubjectModal(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') { modal.classList.remove('show'); closeRemoveSlotModal(); closeQuickAddSubjectModal(); } });
+  quitModal.addEventListener('click', e => { if (e.target === quitModal) closeQuitModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { modal.classList.remove('show'); closeRemoveSlotModal(); closeQuickAddSubjectModal(); closeQuitModal(); } });
   document.querySelectorAll('#page-export .btn-secondary').forEach(btn => btn.addEventListener('click', () => {
     document.querySelectorAll('#page-export .btn-secondary').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
@@ -71,6 +87,8 @@ function bindStaticControls() {
     lastExport = new Date().toLocaleString([], {hour: '2-digit', minute: '2-digit', year: 'numeric', month: 'short', day: 'numeric'});
     document.querySelector('#page-export .page-sub').textContent = 'Last export: ' + lastExport;
   });
+  document.getElementById('quitKeepBtn').addEventListener('click', quitPause);
+  document.getElementById('quitArchiveBtn').addEventListener('click', quitArchive);
 }
 
 async function loadAll() {
@@ -730,4 +748,38 @@ function parseDurationS(dur) {
   if (m) total += parseInt(m[1]) * 60;
   if (!h && !m) { const n = parseFloat(dur); if (!isNaN(n)) total = n * 3600; }
   return Math.round(total);
+}
+
+// ── Quit confirmation ────────────────────────────
+
+async function triggerQuitFlow() {
+  if (!pyApi) return;
+  try {
+    const active = await pyApi.any_slot_active();
+    if (!active) {
+      pyApi.quit_app();
+    } else {
+      showQuitModal();
+    }
+  } catch (e) {
+    pyApi.quit_app();
+  }
+}
+
+function showQuitModal() {
+  document.getElementById('quitConfirmMsg').textContent =
+    'Timers are active. What would you like to do before quitting?';
+  quitModal.classList.add('show');
+}
+
+function closeQuitModal() {
+  quitModal.classList.remove('show');
+}
+
+async function quitPause() {
+  if (pyApi) { await pyApi.pause_all_slots(); pyApi.quit_app(); }
+}
+
+async function quitArchive() {
+  if (pyApi) { await pyApi.archive_all_slots(); pyApi.quit_app(); }
 }

@@ -236,7 +236,7 @@
             <button class="btn btn-secondary btn-sm">Choose…</button>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Minimize to Tray</div><div class="setting-desc">Close window sends to system tray</div></div>
+            <div class="setting-info"><div class="setting-label">Minimize to Menu Bar</div><div class="setting-desc">Hide to menu bar on close — timer keeps running</div></div>
             <label class="toggle"><input type="checkbox" id="minimizeTrayToggle" checked><span class="toggle-slider"></span></label>
           </div>
           <div class="setting-row" style="border-bottom:none;">
@@ -277,8 +277,8 @@
     <div class="remove-slot-msg" style="font-size:13px;color:var(--text2);margin-bottom:18px;">Timer is running.</div>
     <div style="display:flex;gap:10px;justify-content:center;">
       <button class="btn btn-secondary" style="flex:1;" onclick="closeRemoveSlotModal()">Cancel</button>
-      <button class="btn btn-primary" style="flex:1;" onclick="archiveThenRemove()">Archive</button>
       <button class="btn btn-sm" style="flex:1;background:var(--danger);color:#fff;font-weight:600;cursor:pointer;border:none;border-radius:8px;padding:8px 14px;font-size:12px;" onclick="clearAndRemove()">Clear</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="archiveThenRemove()">Archive</button>
     </div>
   </div>
 </div>
@@ -291,6 +291,19 @@
     <div style="display:flex;gap:10px;justify-content:center;">
       <button class="btn btn-secondary" style="flex:1;" onclick="closeQuickAddSubjectModal()">Cancel</button>
       <button class="btn btn-primary" style="flex:1;" onclick="submitQuickAddSubject()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Quit confirmation modal -->
+<div class="modal-overlay" id="quitConfirmModal">
+  <div class="modal-card" style="width:360px;text-align:center;">
+    <div class="modal-title" style="font-size:16px;margin-bottom:12px;">Quit Alangrapher</div>
+    <div id="quitConfirmMsg" style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5;"></div>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button class="btn btn-secondary" style="flex:1;" onclick="closeQuitModal()">Cancel</button>
+      <button class="btn btn-sm" style="flex:1;background:var(--danger);color:#fff;font-weight:600;cursor:pointer;border:none;border-radius:8px;padding:8px 14px;font-size:12px;" id="quitKeepBtn">Pause</button>
+      <button class="btn btn-primary" style="flex:1;" id="quitArchiveBtn">Archive</button>
     </div>
   </div>
 </div>

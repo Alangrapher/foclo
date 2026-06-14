@@ -33,10 +33,40 @@ class Api:
             self.window.destroy()
         return {"ok": True}
 
-    def minimize_window(self):
+    def hide_window(self):
         if self.window:
-            self.window.minimize()
+            self.window.hide()
         return {"ok": True}
+
+    def show_window(self):
+        if self.window:
+            self.window.show()
+        return {"ok": True}
+
+    # ── Slot batch ops ──────────────────────────────────
+
+    def pause_all_slots(self):
+        count = 0
+        for i, s in enumerate(self.engine.slots):
+            if s.status == "running":
+                self.engine.pause(i)
+                count += 1
+        return {"ok": True, "paused": count}
+
+    def archive_all_slots(self):
+        count = 0
+        for i, s in enumerate(self.engine.slots):
+            if s.status in ("running", "paused"):
+                self.engine.archive(i)
+                count += 1
+        return {"ok": True, "archived": count}
+
+    def any_slot_active(self):
+        """True if any slot has non-zero elapsed time (running or paused)."""
+        for s in self.engine.slots:
+            if s.elapsed_s > 0 or s.status == "running":
+                return True
+        return False
 
     def tick(self):
         pass

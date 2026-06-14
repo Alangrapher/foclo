@@ -9,6 +9,7 @@ import os
 import webview
 from app.bridge import Api
 from app.storage import init_db
+from app.tray import TrayIcon
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 UI_DIR = os.path.join(PROJECT_DIR, "ui")
@@ -47,6 +48,9 @@ def main():
         js_api=api,
     )
     api.set_window(window)
+
+    tray = TrayIcon(window)
+    tray.start()
 
     webview.start(gui="cocoa")
 
