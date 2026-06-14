@@ -6,9 +6,19 @@ from timer_engine import TimerEngine
 
 
 class Api:
-    def __init__(self):
+    def __init__(self, window=None):
+        self.window = window
         default_slots = int(get_setting("default_slots", "3"))
         self.engine = TimerEngine(num_slots=default_slots)
+
+    def set_window(self, window):
+        self.window = window
+
+    def resize_window(self, width: int, height: int):
+        if not self.window:
+            return {"ok": False, "error": "Window is not available"}
+        self.window.resize(int(width), int(height))
+        return {"ok": True, "width": int(width), "height": int(height)}
 
     def tick(self):
         """Called ~200ms. Returns nothing — JS polls via get_all_slots()."""
@@ -98,12 +108,16 @@ class Api:
         )
         from datetime import datetime
         today = datetime.now().strftime("%Y-%m-%d")
+        params = []
         if filter == "today":
-            sql += f"WHERE date(r.created_at) = '{today}' "
+            sql += "WHERE date(r.start_time) = ? "
+            params.append(today)
         elif filter == "week":
-            sql += f"WHERE r.created_at >= datetime('now', '-7 days') "
+            sql += "WHERE r.start_time >= datetime('now', '-7 days') "
+        elif filter == "month":
+            sql += "WHERE r.start_time >= datetime('now', '-1 month') "
         sql += "ORDER BY r.created_at DESC"
-        rows = conn.execute(sql).fetchall()
+        rows = conn.execute(sql, params).fetchall()
         conn.close()
 
         def fmt_dur(sec: int) -> str:
@@ -122,16 +136,29 @@ class Api:
                 "start": (r["start_time"] or "")[-8:-3] if r["start_time"] else "",
                 "end": (r["end_time"] or "")[-8:-3] if r["end_time"] else "",
                 "duration": fmt_dur(r["duration_s"]),
-                "date": (r["created_at"] or "")[:10],
+                "date": (r["start_time"] or r["created_at"] or "")[:10],
             }
             for r in rows
         ]
 
     def add_record(self, subject_id: int, description: str, start_time: str, end_time: str):
+        from datetime import datetime, timedelta
+
+        def parse_dt(value: str):
+            try:
+                return datetime.fromisoformat(value)
+            except ValueError:
+                return datetime.fromisoformat(f"{datetime.now().date()}T{value}:00")
+
+        start_dt = parse_dt(start_time)
+        end_dt = parse_dt(end_time)
+        if end_dt < start_dt:
+            end_dt = end_dt + timedelta(days=1)
+        duration_s = max(0, int((end_dt - start_dt).total_seconds()))
         conn = get_conn()
         cur = conn.execute(
-            "INSERT INTO records (subject_id, description, start_time, end_time) VALUES (?, ?, ?, ?)",
-            (subject_id, description, start_time, end_time),
+            "INSERT INTO records (subject_id, description, start_time, end_time, duration_s) VALUES (?, ?, ?, ?, ?)",
+            (subject_id, description, start_dt.isoformat(), end_dt.isoformat(), duration_s),
         )
         conn.commit()
         conn.close()
@@ -196,14 +223,6 @@ class Api:
         return {"ok": True}
 
     # ── Settings ───────────────────────────────────────
-
-
-    def resize_window(self, width: int, height: int):
-        """Called from JS compact mode to resize the native window."""
-        import webview
-        if webview.windows:
-            webview.windows[0].resize(width, height)
-
 
     def get_settings(self):
         return {

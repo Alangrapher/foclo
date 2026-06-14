@@ -22,7 +22,7 @@ def main():
     # tray = Tray(api)
 
     # Read index.html content
-    with open(INDEX_PATH, "r") as f:
+    with open(INDEX_PATH, "r", encoding="utf-8") as f:
         html = f.read()
 
     window = webview.create_window(
@@ -34,6 +34,7 @@ def main():
         resizable=False,
         js_api=api,
     )
+    api.set_window(window)
 
     webview.start(gui="cocoa")
 

@@ -2,10 +2,9 @@
 from __future__ import annotations
 
 import sqlite3
-import os
 from pathlib import Path
 
-DB_PATH = Path.home() / "Documents" / "Alangrapher" / "alangrapher.db"
+DB_PATH = Path(__file__).resolve().parent / "data" / "alangrapher.db"
 
 
 def get_conn() -> sqlite3.Connection:
