@@ -171,13 +171,23 @@ class Api:
     # ── Export ──────────────────────────────────────────
 
     def export_timesheet(self, start: str = "", end: str = "", format: str = "xlsx"):
-        from app.export_service import export_timesheet
         from datetime import date
+        from app.export_service import export_xlsx, export_markdown, export_json
+
         today = date.today().isoformat()
         s_str = start or today
         e_str = end or today
         sd = date.fromisoformat(s_str) if s_str else None
         ed = date.fromisoformat(e_str) if e_str else None
-        path = f"/tmp/alangrapher_export_{s_str}_{e_str}.xlsx"
-        result = export_timesheet(path, start_date=sd, end_date=ed)
+
+        ext_map = {"xlsx": ".xlsx", "md": ".md", "json": ".json"}
+        ext = ext_map.get(format, ".xlsx")
+        path = f"/tmp/alangrapher_export_{s_str}_{e_str}{ext}"
+
+        if format == "md":
+            result = export_markdown(path, start_date=sd, end_date=ed)
+        elif format == "json":
+            result = export_json(path, start_date=sd, end_date=ed)
+        else:
+            result = export_xlsx(path, start_date=sd, end_date=ed)
         return {"ok": True, "path": result}
