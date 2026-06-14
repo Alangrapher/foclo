@@ -39,6 +39,16 @@ def _collect_data(start_date: date | None, end_date: date | None) -> dict:
     s = start_date if start_date else sweek
     e = end_date if end_date else (start_date if start_date else eweek)
 
+    # ── Week-range guard ──
+    week_start = _week_range(s)[0]
+    week_end = week_start + timedelta(days=6)
+    if s < week_start or e > week_end:
+        raise ValueError(
+            f"Date range {s} → {e} spans more than one week.\n"
+            f"This template supports a single Sun–Sat week only.\n"
+            f"Narrow your selection to within {week_start} → {week_end}."
+        )
+
     conn = get_conn()
     rows = conn.execute(
         """SELECT r.id, r.subject_id, r.description, r.start_time, r.duration_s,

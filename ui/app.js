@@ -92,7 +92,11 @@ function bindStaticControls() {
     try {
       const result = await window.pywebview.api.export_timesheet(start, end, format);
       lastExport = new Date().toLocaleString([], {hour: '2-digit', minute: '2-digit', year: 'numeric', month: 'short', day: 'numeric'});
-      document.querySelector('#page-export .page-sub').textContent = 'Last export: ' + lastExport + ' → ' + result.path;
+      if (result.ok) {
+        document.querySelector('#page-export .page-sub').textContent = 'Last export: ' + lastExport + ' → ' + result.path;
+      } else {
+        document.querySelector('#page-export .page-sub').textContent = 'Export failed: ' + result.error;
+      }
     } catch (e) {
       document.querySelector('#page-export .page-sub').textContent = 'Export failed: ' + (e.message || e);
     }
