@@ -227,9 +227,16 @@ html.showing-compact body {
 }
 .todo-checkbox:hover { border-color: var(--accent); }
 .todo-item.done .todo-checkbox { background: var(--accent); border-color: var(--accent); color: #fff; }
-.todo-item.done .todo-checkbox::after { content: '✓'; }
 .todo-item.done .todo-item-subject { text-decoration: line-through; color: var(--muted); }
 .todo-item.done .todo-item-desc { color: var(--muted); }
+/* todo-checkbox SVG icon — two-state via CSS */
+.todo-checkbox svg { color: var(--border); }
+.todo-checkbox svg rect { fill: transparent; }
+.todo-checkmark { display: none; }
+.todo-item.done .todo-checkbox svg { color: var(--accent); }
+.todo-item.done .todo-checkbox svg rect { fill: var(--accent); }
+.todo-item.done .todo-checkmark { display: block; }
+.todo-item.done .todo-checkmark path { stroke: #fff; }
 .todo-item-info { flex: 1; min-width: 0; }
 .todo-item-subject { font-size: 13px; font-weight: 600; color: var(--text); }
 .todo-item-desc { font-size: 11px; color: var(--text2); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -279,6 +286,9 @@ tr:hover .records-actions { visibility: visible; }
 .records-add-row input:focus, .records-add-row select:focus { border-bottom: 1px solid var(--accent); }
 .records-add-row .confirm-btn { background: var(--accent); color: #fff; border: none; border-radius: 6px; width: 24px; height: 24px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .records-add-row .confirm-btn:hover { background: var(--accent-h); }
+/* confirm-btn SVG icon coloring */
+.confirm-btn svg rect { fill: var(--accent); stroke: var(--accent); }
+.confirm-btn svg path { stroke: #fff; }
 
 /* Records: inline edit mode */
 tr.records-editing td { padding: 4px 6px; }
@@ -376,6 +386,7 @@ html.moss .btn-primary {
   background: #cc2200; color: #fff;
   border: 1px solid #cc2200;
   border-left: 3px solid #992200;
+  border-radius: 0;
 }
 html.moss .btn-primary:hover {
   background: #dd3311;
@@ -428,7 +439,10 @@ html.moss .add-slot-btn { border-radius: 0; }
 html.moss .toggle-slider { border-radius: 0; }
 html.moss .form-input,
 html.moss .form-select { border-radius: 0; }
-html.moss .records-add-row .confirm-btn { border-radius: 0; }
+/* Moss: confirm-btn — square corners */
+html.moss .confirm-btn { border-radius: 0; }
+/* Moss: todo checkbox — square corners */
+html.moss .todo-checkbox { border-radius: 0; }
 html.moss .compact-timer-row .arrow { border-radius: 0; }
 html.moss .modal-card { border-radius: 0; }
 html.moss .modal-accent { border-radius: 0; }
