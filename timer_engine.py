@@ -84,8 +84,10 @@ class TimerEngine:
         slot.status = "paused"
 
     def archive(self, index: int) -> int:
-        """Archive current slot. Returns record ID."""
+        """Archive current slot. Returns record ID (0 if slot was idle)."""
         slot = self.slots[index]
+        if slot.status == "idle":
+            return 0
         total_s = slot.get_total_s()
 
         # BUG 3: use tracked started_at_real for start_time; fall back to now() - elapsed
