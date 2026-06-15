@@ -20,7 +20,10 @@ def get_records(filter: str = "today") -> list[dict]:
             sql += "WHERE date(r.start_time) = ? "
             params.append(today)
         elif filter == "week":
-            sql += "WHERE r.start_time >= datetime('now', '-7 days') "
+            today = datetime.now().date()
+            monday = today - timedelta(days=today.weekday())
+            sql += "WHERE date(r.start_time) >= ? "
+            params.append(monday.isoformat())
         elif filter == "month":
             sql += "WHERE r.start_time >= datetime('now', '-1 month') "
         sql += "ORDER BY r.created_at DESC"
