@@ -130,8 +130,8 @@ body {
 }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover { background: var(--accent-h); }
-.btn-primary.btn-switch { background: var(--paused); color: #1B1F2A; }
-.btn-primary.btn-switch:hover { background: color-mix(in srgb, var(--paused) 85%, #fff); }
+.btn-primary.btn-switch { background: var(--accent); color: #fff; }
+.btn-primary.btn-switch:hover { background: var(--accent-h); }
 .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
 .btn-secondary:hover { background: var(--hover); }
 .btn:disabled { opacity: 0.58; cursor: wait; pointer-events: none; }

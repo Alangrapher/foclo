@@ -667,7 +667,11 @@ function toggleThemeClick() {
     return;
   }
   if (isMoss) {
-    applyTheme(previousTheme);
+    if (clickCount >= 5) {
+      clearTimeout(clickTimer);
+      clickCount = 0;
+      applyTheme(previousTheme);
+    }
     return;
   }
   applyTheme(isDark ? 'light' : 'dark');
@@ -699,7 +703,7 @@ function applyTheme(theme, persist = true) {
 
 function updateDarkButton() {
   if (isMoss) {
-    darkToggle.innerHTML = '<svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="#cc2200" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.341 6.484A10 10 0 0 1 10.266 21.85"/><path d="M3.659 17.516A10 10 0 0 1 13.74 2.152"/><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/></svg> Exit';
+    darkToggle.innerHTML = '<svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="#cc2200" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.341 6.484A10 10 0 0 1 10.266 21.85"/><path d="M3.659 17.516A10 10 0 0 1 13.74 2.152"/><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/></svg> Enable';
     return;
   }
   darkToggle.innerHTML = isDark
