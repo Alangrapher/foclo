@@ -20,11 +20,14 @@ let recordsFilter = 'today';
 let compactIndex = 0;
 let weekStart = 'sun'; // 'sun' or 'mon'
 let minimizeToTray = true;
+let defaultSlots = '3';
 let isDark = false;
 let isMoss = false;
 let clickCount = 0;
 let clickTimer = null;
 let lastExport = 'No exports yet';
+let isRefreshing = false;
+let isExporting = false;
 
 function whenReady(fn) {
   if (window.pywebview && window.pywebview.api) {
@@ -39,8 +42,14 @@ function whenReady(fn) {
 }
 
 whenReady(async () => {
-  await loadAll();
-  setInterval(refreshClocks, 500);
+  try {
+    await loadAll();
+  } catch (e) {
+    console.error('Failed to load app state:', e);
+  }
+  setInterval(() => {
+    refreshClocks().catch(e => console.error('Failed to refresh clocks:', e));
+  }, 500);
 });
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -70,26 +79,33 @@ function bindStaticControls() {
     }
   });
   darkToggle.addEventListener('click', toggleThemeClick);
-  trigger.addEventListener('click', () => modal.classList.add('show'));
+  trigger.addEventListener('click', () => showModal(modal));
   modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
   const removeSlotModal = document.getElementById('removeSlotModal');
   removeSlotModal.addEventListener('click', e => { if (e.target === removeSlotModal) closeRemoveSlotModal(); });
   const quickAddModal = document.getElementById('quickAddSubjectModal');
   quickAddModal.addEventListener('click', e => { if (e.target === quickAddModal) closeQuickAddSubjectModal(); });
   quitModal.addEventListener('click', e => { if (e.target === quitModal) closeQuitModal(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') { modal.classList.remove('show'); closeRemoveSlotModal(); closeQuickAddSubjectModal(); closeQuitModal(); } });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllModals(); });
   document.querySelectorAll('#page-export .btn-secondary').forEach(btn => btn.addEventListener('click', () => {
     document.querySelectorAll('#page-export .btn-secondary').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   }));
   const exportButton = document.querySelector('#page-export .btn-primary');
   if (exportButton) exportButton.addEventListener('click', async () => {
+    if (isExporting) return;
+    if (!window.pywebview || !window.pywebview.api || typeof window.pywebview.api.export_timesheet !== 'function') {
+      document.querySelector('#page-export .page-sub').textContent = 'Export unavailable: backend is not ready';
+      return;
+    }
     const start = document.getElementById('export-start').value;
     const end = document.getElementById('export-end').value;
     const fmtBtn = document.querySelector('#export-format-group .btn-secondary.active');
     const format = fmtBtn ? fmtBtn.dataset.format : 'xlsx';
 
     try {
+      isExporting = true;
+      exportButton.disabled = true;
       const result = await window.pywebview.api.export_timesheet(start, end, format);
       lastExport = new Date().toLocaleString([], {hour: '2-digit', minute: '2-digit', year: 'numeric', month: 'short', day: 'numeric'});
       if (result.ok) {
@@ -99,15 +115,23 @@ function bindStaticControls() {
       }
     } catch (e) {
       document.querySelector('#page-export .page-sub').textContent = 'Export failed: ' + (e.message || e);
+    } finally {
+      isExporting = false;
+      exportButton.disabled = false;
     }
   });
   document.getElementById('quitKeepBtn').addEventListener('click', quitPause);
   document.getElementById('quitArchiveBtn').addEventListener('click', quitArchive);
+  bindSettingsControls();
 }
 
 async function loadAll() {
   if (!window.pywebview || !window.pywebview.api) return;
-  await Promise.all([loadSubjects(), loadSlots(), loadTodos(), loadRecords(), loadSettings()]);
+  try {
+    await Promise.all([loadSubjects(), loadSlots(), loadTodos(), loadRecords(), loadSettings()]);
+  } catch (e) {
+    console.error('Failed to load app state:', e);
+  }
   renderAll();
 }
 
@@ -143,19 +167,28 @@ async function loadSettings() {
   const s = await window.pywebview.api.get_settings();
   minimizeToTray = s.minimize_to_tray === '1';
   weekStart = s.week_starts_on === 'Monday' ? 'mon' : 'sun';
+  defaultSlots = s.default_slots || '3';
   // Backup state
   window._backupPath = s.backup_location || '~/Documents/Alangrapher/backups/';
   window._autoBackup = s.auto_backup !== '0';
 }
 
 async function refreshClocks() {
-  if (window.pywebview && window.pywebview.api) {
-    await loadSlots();
-  } else {
-    tickLocalSlots();
+  if (isRefreshing) return;
+  isRefreshing = true;
+  try {
+    if (window.pywebview && window.pywebview.api) {
+      await loadSlots();
+    } else {
+      tickLocalSlots();
+    }
+    updateTimerCards();
+    renderCompact();
+  } catch (e) {
+    console.error('Clock refresh failed:', e);
+  } finally {
+    isRefreshing = false;
   }
-  updateTimerCards();
-  renderCompact();
 }
 
 function updateTimerCards() {
@@ -248,10 +281,14 @@ async function primaryTimerAction(index) {
   else await startSlot(index);
 }
 
-async function startSlot(index) {
+async function startSlot(index, values = null) {
   const card = document.querySelector(`.timer-slot-card[data-slot="${index}"]`);
-  const sid = card ? Number(card.querySelector('.form-select').value) || null : slots[index].subject_id;
-  const desc = card ? card.querySelector('.form-input').value : slots[index].description;
+  const sid = values && Object.prototype.hasOwnProperty.call(values, 'subject_id')
+    ? values.subject_id
+    : (card ? Number(card.querySelector('.form-select').value) || null : slots[index].subject_id);
+  const desc = values && Object.prototype.hasOwnProperty.call(values, 'description')
+    ? values.description
+    : (card ? card.querySelector('.form-input').value : slots[index].description);
   if (window.pywebview && window.pywebview.api) {
     await window.pywebview.api.set_description(index, desc || '');
     await window.pywebview.api.start_slot(index, sid);
@@ -312,13 +349,13 @@ function confirmRemoveSlot(index) {
     removeSlot(index);
     return;
   }
-  pendingRemoveSlot = index;
   const card = document.querySelector(`.timer-slot-card[data-slot="${index}"]`);
   const subj = subjectById(slot.subject_id);
   const name = subj ? subj.name : 'this timer';
   const modal = document.getElementById('removeSlotModal');
   modal.querySelector('.remove-slot-msg').textContent = `Timer is ${slot.status}. Close "${name}"?`;
-  modal.classList.add('show');
+  showModal(modal);
+  pendingRemoveSlot = index;
 }
 
 function closeRemoveSlotModal() {
@@ -330,6 +367,7 @@ async function archiveThenRemove() {
   const index = pendingRemoveSlot;
   if (index === null || index === undefined) return;
   await archiveSlot(index);
+  await removeSlot(index);
   closeRemoveSlotModal();
 }
 
@@ -408,7 +446,7 @@ function updateTiles() {
 
   let todayH = 0, weekH = 0;
   records.forEach(r => {
-    const h = parseFloat((r.duration || '0').replace(/h$/, '')) || 0;
+    const h = parseDurationS(r.duration || '0') / 3600;
     const d = r.date || '';
     if (d === todayStr) todayH += h;
     if (d >= weekStartStr && d <= todayStr) weekH += h;
@@ -543,7 +581,7 @@ async function startTodoTimer(arg) {
   slot.subject_id = subj.id;
   slot.description = todo.description || '';
   switchPage('timer');
-  await startSlot(slot.index);
+  await startSlot(slot.index, {subject_id: subj.id, description: todo.description || ''});
 }
 
 function renderTodos() {
@@ -676,12 +714,23 @@ async function delSubject(span) {
 
 function openQuickAddSubjectModal() {
   document.getElementById('quickAddSubjectInput').value = '';
-  document.getElementById('quickAddSubjectModal').classList.add('show');
+  showModal(document.getElementById('quickAddSubjectModal'));
   setTimeout(() => document.getElementById('quickAddSubjectInput').focus(), 100);
 }
 
 function closeQuickAddSubjectModal() {
   document.getElementById('quickAddSubjectModal').classList.remove('show');
+}
+
+function showModal(target) {
+  if (!target) return;
+  closeAllModals();
+  target.classList.add('show');
+}
+
+function closeAllModals() {
+  document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
+  pendingRemoveSlot = null;
 }
 
 async function submitQuickAddSubject() {
@@ -700,35 +749,66 @@ async function quickAddSubject() {
 
 function renderSettings() {
   const wsSelect = document.getElementById('weekStartSelect');
+  if (wsSelect) wsSelect.value = weekStart;
+  const mtToggle = document.getElementById('minimizeTrayToggle');
+  if (mtToggle) mtToggle.checked = minimizeToTray;
+  const defaultSlotsSelect = document.getElementById('defaultSlotsSelect');
+  if (defaultSlotsSelect) defaultSlotsSelect.value = defaultSlots;
+
+  // ── Backup ──────────────────────────────────────────
+
+  const abToggle = document.getElementById('autoBackupToggle');
+  if (abToggle) abToggle.checked = window._autoBackup !== false;
+
+  const chooseBtn = document.getElementById('chooseBackupBtn');
+  const backupPathEl = document.getElementById('backupPath');
+  const backupDescEl = document.getElementById('backupDesc');
+  if (backupPathEl) {
+    // Reflect saved path
+    const savedPath = window._backupPath || '~/Documents/Alangrapher/backups/';
+    backupPathEl.textContent = savedPath;
+    if (backupDescEl) backupDescEl.textContent = 'Hourly backup to ' + savedPath + '/';
+  }
+
+  // ── Restore ─────────────────────────────────────────
+}
+
+function bindSettingsControls() {
+  const wsSelect = document.getElementById('weekStartSelect');
   if (wsSelect) {
-    wsSelect.value = weekStart;
-    wsSelect.addEventListener('change', () => {
+    wsSelect.addEventListener('change', async () => {
       weekStart = wsSelect.value;
+      if (window.pywebview && window.pywebview.api) {
+        await window.pywebview.api.update_setting('week_starts_on', weekStart === 'mon' ? 'Monday' : 'Sunday');
+      }
       updateTiles();
     });
   }
+
   const mtToggle = document.getElementById('minimizeTrayToggle');
   if (mtToggle) {
-    mtToggle.checked = minimizeToTray;
     mtToggle.addEventListener('change', async () => {
       minimizeToTray = mtToggle.checked;
       if (window.pywebview && window.pywebview.api) await window.pywebview.api.update_setting('minimize_to_tray', minimizeToTray ? '1' : '0');
     });
   }
-  document.querySelectorAll('#page-settings .form-select')[1]?.addEventListener('change', async e => {
-    if (window.pywebview && window.pywebview.api) await window.pywebview.api.update_setting('default_slots', e.target.value);
-  });
 
-  // ── Backup ──────────────────────────────────────────
+  const defaultSlotsSelect = document.getElementById('defaultSlotsSelect');
+  if (defaultSlotsSelect) {
+    defaultSlotsSelect.addEventListener('change', async e => {
+      defaultSlots = e.target.value;
+      if (window.pywebview && window.pywebview.api) await window.pywebview.api.update_setting('default_slots', defaultSlots);
+    });
+  }
 
   const abToggle = document.getElementById('autoBackupToggle');
   if (abToggle) {
-    abToggle.checked = window._autoBackup !== false;
     abToggle.addEventListener('change', async () => {
       const enabled = abToggle.checked;
       if (window.pywebview && window.pywebview.api) {
         await window.pywebview.api.update_setting('auto_backup', enabled ? '1' : '0');
       }
+      window._autoBackup = enabled;
     });
   }
 
@@ -736,33 +816,41 @@ function renderSettings() {
   const backupPathEl = document.getElementById('backupPath');
   const backupDescEl = document.getElementById('backupDesc');
   if (chooseBtn && backupPathEl) {
-    // Reflect saved path
-    const savedPath = window._backupPath || '~/Documents/Alangrapher/backups/';
-    backupPathEl.textContent = savedPath;
-    if (backupDescEl) backupDescEl.textContent = 'Hourly backup to ' + savedPath + '/';
     chooseBtn.addEventListener('click', async () => {
       if (!window.pywebview || !window.pywebview.api) return;
-      const result = await window.pywebview.api.choose_backup_folder(backupPathEl.textContent);
-      if (result.ok) {
+      try {
+        const result = await window.pywebview.api.choose_backup_folder(backupPathEl.textContent);
+        if (!result.ok) {
+          if (!isCancelResult(result)) alert('Backup folder selection failed: ' + (result.error || 'No folder selected'));
+          return;
+        }
+        window._backupPath = result.path;
         backupPathEl.textContent = result.path;
         if (backupDescEl) backupDescEl.textContent = 'Hourly backup to ' + result.path + '/';
+      } catch (e) {
+        alert('Backup folder selection failed: ' + (e.message || e));
       }
     });
   }
-
-  // ── Restore ─────────────────────────────────────────
 
   const restoreBtn = document.getElementById('restoreBackupBtn');
   if (restoreBtn) {
     restoreBtn.addEventListener('click', async () => {
       if (!window.pywebview || !window.pywebview.api) return;
-      const savedPath = window._backupPath || '~/Documents/Alangrapher/backups/';
-      const pick = await window.pywebview.api.choose_backup_file(savedPath);
-      if (!pick.ok) return;  // user cancelled
-      if (!confirm('This will replace ALL current data with the backup from:\n\n' + pick.path + '\n\nThe app will close after restore.')) return;
-      const result = await window.pywebview.api.restore_backup(pick.path);
-      if (!result.ok) alert('Restore failed: ' + result.error);
-      // On success, the Python side calls window.destroy() — app quits
+      try {
+        const savedPath = window._backupPath || '~/Documents/Alangrapher/backups/';
+        const pick = await window.pywebview.api.choose_backup_file(savedPath);
+        if (!pick.ok) {
+          if (!isCancelResult(pick)) alert('Restore file selection failed: ' + (pick.error || 'No file selected'));
+          return;
+        }
+        if (!confirm('This will replace ALL current data with the backup from:\n\n' + pick.path + '\n\nThe app will close after restore.')) return;
+        const result = await window.pywebview.api.restore_backup(pick.path);
+        if (!result.ok) alert('Restore failed: ' + result.error);
+        // On success, the Python side calls window.destroy() - app quits
+      } catch (e) {
+        alert('Restore failed: ' + (e.message || e));
+      }
     });
   }
 }
@@ -791,6 +879,9 @@ function calcDur(start, end) {
 }
 
 function fmtSeconds(sec) {
+  sec = Number(sec);
+  if (!Number.isFinite(sec)) sec = 0;
+  sec = Math.max(0, Math.floor(sec));
   const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
@@ -798,6 +889,7 @@ function fmtSeconds(sec) {
 function todayIso() { return new Date().toISOString().slice(0, 10); }
 function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 function attr(s) { return esc(s).replace(/"/g, '&quot;'); }
+function isCancelResult(result) { return String(result?.error || '').toLowerCase() === 'cancelled'; }
 function rgbToHex(value) {
   const m = String(value).match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
   if (!m) return value || '#5E6AD2';
@@ -805,6 +897,7 @@ function rgbToHex(value) {
 }
 
 function parseDurationS(dur) {
+  dur = String(dur ?? '');
   let total = 0;
   const h = dur.match(/([\d.]+)\s*h/);
   const m = dur.match(/(\d+)\s*m/);
@@ -833,7 +926,7 @@ async function triggerQuitFlow() {
 function showQuitModal() {
   document.getElementById('quitConfirmMsg').textContent =
     'Timers are active. What would you like to do before quitting?';
-  quitModal.classList.add('show');
+  showModal(quitModal);
 }
 
 function closeQuitModal() {

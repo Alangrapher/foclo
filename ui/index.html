@@ -138,7 +138,7 @@
         <div class="page-header">
           <div>
             <div class="page-title">Records</div>
-            <div class="page-sub">Filter by date · <span id="recordsCount">6</span> entries total</div>
+            <div class="page-sub">Filter by date · <span id="recordsCount">0</span> entries total</div>
           </div>
           <div class="filter-chips">
             <span class="chip active" onclick="setRecordsFilter('Today')">Today</span>
@@ -160,14 +160,7 @@
         <div class="records-scroll-wrap">
         <table class="records-table">
             <thead><tr><th class="records-date-col">Date</th><th>Subject</th><th>Description</th><th style="text-align:right">Duration</th><th style="width:60px"></th></tr></thead>
-            <tbody id="recordsBody">
-              <tr data-date="2026-06-12" data-subject="Code Review" data-desc="PR #142 — auth module" data-start="09:30" data-end="11:00" data-dur="1h 30m"><td class="cell-date records-date-col">2026-06-12</td><td class="cell-subj">Code Review</td><td class="cell-desc">PR #142 — auth module</td><td class="cell-start">09:30</td><td class="cell-end">11:00</td><td class="cell-dur" style="text-align:right">1h 30m</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>
-              <tr data-date="2026-06-12" data-subject="Design System" data-desc="Token audit" data-start="11:15" data-end="12:00" data-dur="45m"><td class="cell-date records-date-col">2026-06-12</td><td class="cell-subj">Design System</td><td class="cell-desc">Token audit</td><td class="cell-start">11:15</td><td class="cell-end">12:00</td><td class="cell-dur" style="text-align:right">45m</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>
-              <tr data-date="2026-06-12" data-subject="Documentation" data-desc="API migration guide" data-start="13:00" data-end="14:00" data-dur="1h 00m"><td class="cell-date records-date-col">2026-06-12</td><td class="cell-subj">Documentation</td><td class="cell-desc">API migration guide</td><td class="cell-start">13:00</td><td class="cell-end">14:00</td><td class="cell-dur" style="text-align:right">1h 00m</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>
-              <tr data-date="2026-06-12" data-subject="Meeting" data-desc="Sprint planning" data-start="14:30" data-end="15:15" data-dur="45m"><td class="cell-date records-date-col">2026-06-12</td><td class="cell-subj">Meeting</td><td class="cell-desc">Sprint planning</td><td class="cell-start">14:30</td><td class="cell-end">15:15</td><td class="cell-dur" style="text-align:right">45m</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>
-              <tr data-date="2026-06-12" data-subject="Research" data-desc="Competitor analysis" data-start="15:30" data-end="16:30" data-dur="1h 00m"><td class="cell-date records-date-col">2026-06-12</td><td class="cell-subj">Research</td><td class="cell-desc">Competitor analysis</td><td class="cell-start">15:30</td><td class="cell-end">16:30</td><td class="cell-dur" style="text-align:right">1h 00m</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>
-              <tr data-date="2026-06-12" data-subject="Code Review" data-desc="PR #144 — payment refactor" data-start="16:45" data-end="18:00" data-dur="1h 15m"><td class="cell-date records-date-col">2026-06-12</td><td class="cell-subj">Code Review</td><td class="cell-desc">PR #144 — payment refactor</td><td class="cell-start">16:45</td><td class="cell-end">18:00</td><td class="cell-dur" style="text-align:right">1h 15m</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>
-            </tbody>
+            <tbody id="recordsBody"></tbody>
           </table>
         </div>
       </div>
@@ -225,7 +218,7 @@
           </div>
           <div class="setting-row">
             <div class="setting-info"><div class="setting-label">Default Slots</div><div class="setting-desc">Number of concurrent timer slots (restart to apply)</div></div>
-            <select class="form-select" style="width:80px;"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
+            <select class="form-select" id="defaultSlotsSelect" style="width:80px;"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
           </div>
           <div class="setting-row">
             <div class="setting-info"><div class="setting-label">Auto Backup</div><div class="setting-desc" id="backupDesc">Hourly backup to ~/Documents/Alangrapher/backups/</div></div>

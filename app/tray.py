@@ -42,7 +42,9 @@ def _pause_all():
         pass
 
 
-def _archive_all():
+def _archive_all() -> list[int]:
+    """Archive all active slots. Returns list of indices that failed."""
+    failed = []
     try:
         from app.storage import get_setting
         from timer_engine import TimerEngine
@@ -50,9 +52,14 @@ def _archive_all():
         engine = TimerEngine(num_slots=default_slots)
         for i, s in enumerate(engine.slots):
             if s.status in ("running", "paused"):
-                engine.archive(i)
+                try:
+                    engine.archive(i)
+                except Exception:
+                    failed.append(i)
     except Exception:
-        pass
+        # If we can't even create the engine, everything failed
+        return []
+    return failed
 
 
 # ── Target (menu action receiver) ────────────────────────
@@ -97,7 +104,16 @@ class _TrayTarget(NSObject):
         if response == AppKit.NSAlertFirstButtonReturn:   # Cancel
             return
         elif response == AppKit.NSAlertSecondButtonReturn:  # Archive
-            _archive_all()
+            failed = _archive_all()
+            if failed:
+                # BUG 8: show an alert if any slots failed to archive
+                err_alert = AppKit.NSAlert.alloc().init()
+                err_alert.setMessageText_("Archive Warning")
+                err_alert.setInformativeText_(
+                    f"Failed to archive slot(s): {failed}. Timer data for these slots may be lost."
+                )
+                err_alert.setAlertStyle_(AppKit.NSAlertStyleWarning)
+                err_alert.runModal()
             self._window.destroy()
         elif response == AppKit.NSAlertThirdButtonReturn:   # Pause
             _pause_all()

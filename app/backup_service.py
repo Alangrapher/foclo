@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import sqlite3
 import threading
+import traceback
 from datetime import datetime
 from pathlib import Path
 
@@ -22,14 +23,18 @@ class BackupService:
         self._interval = interval_minutes * 60
         self._timer: threading.Timer | None = None
         self._lock = threading.Lock()
+        self._stopped = False               # BUG 1: guard against scheduling after stop
+        self._consecutive_failures = 0       # BUG 9: track silent backup failures
 
     # ── lifecycle ──────────────────────────────────────────
 
     def start(self):
-        self._schedule_next()
+        with self._lock:                     # BUG 12: hold lock, consistent with _tick
+            self._schedule_next()
 
     def stop(self):
         with self._lock:
+            self._stopped = True             # BUG 1
             if self._timer:
                 self._timer.cancel()
                 self._timer = None
@@ -44,27 +49,33 @@ class BackupService:
     def _tick(self):
         try:
             self._do_backup()
+            self._consecutive_failures = 0   # BUG 9: reset on success
         except Exception:
-            pass  # silent — backup failure should not crash the app
+            # BUG 9: at minimum print the exception and track failures
+            self._consecutive_failures += 1
+            traceback.print_exc()
+            print(f"[BackupService] backup failed ({self._consecutive_failures} consecutive failures)")
         finally:
             with self._lock:
-                self._schedule_next()
+                if not self._stopped:        # BUG 1: don't reschedule after stop()
+                    self._schedule_next()
 
     # ── core backup ────────────────────────────────────────
 
     def backup_now(self) -> tuple[bool, str]:
         """Manual backup trigger. Returns (ok, path|error)."""
         try:
-            path = self._do_backup()
+            path = self._do_backup(force=True)  # BUG 7: bypass auto_backup check
             if path:
                 return True, path
-            return False, "Auto-backup is disabled"
+            return False, "Backup failed — check backup location"
         except Exception as e:
             return False, str(e)
 
-    def _do_backup(self) -> str | None:
+    def _do_backup(self, force: bool = False) -> str | None:
         # Re-read setting every tick so toggles take effect without restart
-        if get_setting("auto_backup", "1") != "1":
+        # BUG 7: force=True bypasses the check (manual trigger)
+        if not force and get_setting("auto_backup", "1") != "1":
             return None
 
         backup_dir = get_setting("backup_location", "") or DEFAULT_BACKUP_DIR
@@ -166,6 +177,16 @@ class BackupService:
         except OSError as e:
             return False, f"Failed to write database: {e}"
 
+        # BUG 2: delete stale WAL / SHM files left over after copy
+        db_str = str(DB_PATH)
+        for suffix in ("-wal", "-shm"):
+            stale = db_str + suffix
+            if os.path.isfile(stale):
+                try:
+                    os.remove(stale)
+                except OSError:
+                    pass
+
         return True, backup_path
 
     # ── pruning ────────────────────────────────────────────
@@ -173,8 +194,10 @@ class BackupService:
     def _prune(self, backup_dir: str):
         """Keep only the most recent MAX_BACKUPS."""
         try:
+            # BUG 6: filter to alangrapher_*.db so foreign .db files don't displace real backups
             files = sorted(
-                [f for f in os.listdir(backup_dir) if f.endswith(".db")],
+                [f for f in os.listdir(backup_dir)
+                 if f.startswith("alangrapher_") and f.endswith(".db")],
                 reverse=True,
             )
             for old in files[MAX_BACKUPS:]:

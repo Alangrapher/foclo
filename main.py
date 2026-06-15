@@ -61,6 +61,10 @@ def main():
 
     webview.start(gui="cocoa")
 
+    # BUG 11: graceful shutdown — stop the backup timer to prevent
+    # daemon thread from writing a corrupt half-written backup on exit
+    backup.stop()
+
 
 if __name__ == "__main__":
     main()

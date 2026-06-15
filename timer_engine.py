@@ -6,6 +6,7 @@ No threads. State persisted to slot_state table for crash recovery.
 from __future__ import annotations
 
 import time
+from datetime import datetime, timedelta
 from app.storage import get_conn
 
 
@@ -17,6 +18,8 @@ class TimerSlot:
         self.description = ""
         self.elapsed_s = 0.0
         self.started_at: float | None = None
+        # BUG 3: track actual wall-clock start time for accurate record start_time
+        self.started_at_real: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -66,6 +69,8 @@ class TimerEngine:
         slot.status = "running"
         slot.subject_id = subject_id
         slot.started_at = time.time()
+        # BUG 3: track the real wall-clock start time once, so archive() can use it
+        slot.started_at_real = datetime.now().isoformat()
         self._save_slot(slot)
 
     def pause(self, index: int):
@@ -81,19 +86,25 @@ class TimerEngine:
     def archive(self, index: int) -> int:
         """Archive current slot. Returns record ID."""
         slot = self.slots[index]
-        from datetime import datetime
         total_s = slot.get_total_s()
-        start = datetime.now().isoformat()
-        end = datetime.now().isoformat()  # Simplified — real app would track actual start
+
+        # BUG 3: use tracked started_at_real for start_time; fall back to now() - elapsed
+        if slot.started_at_real:
+            start = slot.started_at_real
+        else:
+            start = (datetime.now() - timedelta(seconds=total_s)).isoformat()
+        end = datetime.now().isoformat()
 
         conn = get_conn()
-        cur = conn.execute(
-            "INSERT INTO records (subject_id, description, start_time, end_time, duration_s, slot_index) VALUES (?, ?, ?, ?, ?, ?)",
-            (slot.subject_id, slot.description, start, end, int(total_s), index),
-        )
-        record_id = cur.lastrowid
-        conn.commit()
-        conn.close()
+        try:
+            cur = conn.execute(
+                "INSERT INTO records (subject_id, description, start_time, end_time, duration_s, slot_index) VALUES (?, ?, ?, ?, ?, ?)",
+                (slot.subject_id, slot.description, start, end, int(total_s), index),
+            )
+            record_id = cur.lastrowid
+            conn.commit()
+        finally:
+            conn.close()
 
         # Reset slot
         slot.status = "idle"
@@ -101,6 +112,7 @@ class TimerEngine:
         slot.description = ""
         slot.elapsed_s = 0.0
         slot.started_at = None
+        slot.started_at_real = None
         self._save_slot(slot)
         return record_id
 
@@ -133,8 +145,10 @@ class TimerEngine:
 
     def _load_state(self):
         conn = get_conn()
-        rows = conn.execute("SELECT * FROM slot_state ORDER BY slot_index").fetchall()
-        conn.close()
+        try:
+            rows = conn.execute("SELECT * FROM slot_state ORDER BY slot_index").fetchall()
+        finally:
+            conn.close()
         for row in rows:
             idx = row["slot_index"]
             if idx < len(self.slots):
@@ -150,23 +164,29 @@ class TimerEngine:
                         s.elapsed_s += time.time() - s.started_at
                     s.started_at = None
                     s.status = "paused"
+                    # BUG 4: persist crash-recovery modifications
+                    self._save_slot(s)
 
     def _save_slot(self, slot: TimerSlot):
         conn = get_conn()
-        conn.execute(
-            "INSERT OR REPLACE INTO slot_state (slot_index, status, subject_id, description, elapsed_s, started_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (slot.index, slot.status, slot.subject_id, slot.description, slot.elapsed_s, slot.started_at),
-        )
-        conn.commit()
-        conn.close()
+        try:
+            conn.execute(
+                "INSERT OR REPLACE INTO slot_state (slot_index, status, subject_id, description, elapsed_s, started_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (slot.index, slot.status, slot.subject_id, slot.description, slot.elapsed_s, slot.started_at),
+            )
+            conn.commit()
+        finally:
+            conn.close()
 
     def _sync_slot_state_table(self):
         conn = get_conn()
-        conn.execute("DELETE FROM slot_state")
-        for s in self.slots:
-            conn.execute(
-                "INSERT INTO slot_state (slot_index, status, subject_id, description, elapsed_s, started_at) VALUES (?, ?, ?, ?, ?, ?)",
-                (s.index, s.status, s.subject_id, s.description, s.elapsed_s, s.started_at),
-            )
-        conn.commit()
-        conn.close()
+        try:
+            conn.execute("DELETE FROM slot_state")
+            for s in self.slots:
+                conn.execute(
+                    "INSERT INTO slot_state (slot_index, status, subject_id, description, elapsed_s, started_at) VALUES (?, ?, ?, ?, ?, ?)",
+                    (s.index, s.status, s.subject_id, s.description, s.elapsed_s, s.started_at),
+                )
+            conn.commit()
+        finally:
+            conn.close()
