@@ -88,6 +88,11 @@ def init_db():
 
             INSERT OR IGNORE INTO slot_state (slot_index) VALUES (0), (1), (2);
         """)
+        # Migration: add started_at_real column for crash-safe archive accuracy
+        try:
+            conn.execute("ALTER TABLE slot_state ADD COLUMN started_at_real TEXT")
+        except sqlite3.OperationalError:
+            pass  # column already exists
         conn.commit()
 
 

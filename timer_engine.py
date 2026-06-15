@@ -158,6 +158,7 @@ class TimerEngine:
                 s.description = row["description"] or ""
                 s.elapsed_s = row["elapsed_s"]
                 s.started_at = row["started_at"]
+                s.started_at_real = row["started_at_real"] if row["started_at_real"] else None
                 # Crash recovery: if was running, pause it (safe)
                 if s.status == "running":
                     if s.started_at:
@@ -171,8 +172,8 @@ class TimerEngine:
         conn = get_conn()
         try:
             conn.execute(
-                "INSERT OR REPLACE INTO slot_state (slot_index, status, subject_id, description, elapsed_s, started_at) VALUES (?, ?, ?, ?, ?, ?)",
-                (slot.index, slot.status, slot.subject_id, slot.description, slot.elapsed_s, slot.started_at),
+                "INSERT OR REPLACE INTO slot_state (slot_index, status, subject_id, description, elapsed_s, started_at, started_at_real) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (slot.index, slot.status, slot.subject_id, slot.description, slot.elapsed_s, slot.started_at, slot.started_at_real),
             )
             conn.commit()
         finally:
@@ -184,8 +185,8 @@ class TimerEngine:
             conn.execute("DELETE FROM slot_state")
             for s in self.slots:
                 conn.execute(
-                    "INSERT INTO slot_state (slot_index, status, subject_id, description, elapsed_s, started_at) VALUES (?, ?, ?, ?, ?, ?)",
-                    (s.index, s.status, s.subject_id, s.description, s.elapsed_s, s.started_at),
+                    "INSERT INTO slot_state (slot_index, status, subject_id, description, elapsed_s, started_at, started_at_real) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (s.index, s.status, s.subject_id, s.description, s.elapsed_s, s.started_at, s.started_at_real),
                 )
             conn.commit()
         finally:
