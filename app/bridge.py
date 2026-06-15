@@ -99,6 +99,8 @@ class Api:
         return {"ok": True, "slot": self.engine.get_slot(index).to_dict()}
 
     def archive_slot(self, index: int, subject_id: int | None = None, description: str = ""):
+        if subject_id is not None:
+            self.engine.slots[index].subject_id = subject_id
         if description:
             self.engine.set_description(index, description)
         record_id = self.engine.archive(index)
