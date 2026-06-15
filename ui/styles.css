@@ -228,7 +228,7 @@ html.showing-compact body {
 .todo-checkbox:hover { border-color: var(--accent); }
 .todo-item.done .todo-checkbox { background: var(--accent); border-color: var(--accent); color: #fff; }
 .todo-item.done .todo-item-subject { text-decoration: line-through; color: var(--muted); }
-.todo-item.done .todo-item-desc { color: var(--muted); }
+.todo-item.done .todo-item-desc { text-decoration: line-through; color: var(--muted); }
 /* todo-checkbox SVG icon — two-state via CSS */
 .todo-checkbox svg { color: var(--border); }
 .todo-checkbox svg rect { fill: transparent; }
