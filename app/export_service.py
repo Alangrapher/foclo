@@ -305,6 +305,7 @@ def export_markdown(
         # Description summary line
         if descs:
             desc_joined = " / ".join(descs)
+            desc_joined = desc_joined.replace("|", "\\|")
             lines.append(f"| | | {desc_joined} |")
         lines.append("")
 

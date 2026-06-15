@@ -233,6 +233,13 @@ class Api:
         ok, detail = self._backup.backup_now()
         return {"ok": ok, "path": detail} if ok else {"ok": False, "error": detail}
 
+    def get_backup_status(self):
+        """Return backup health stats."""
+        if not self._backup:
+            return {"ok": False, "error": "Backup service not available"}
+        status = self._backup.get_status()
+        return {"ok": True, **status}
+
     def choose_backup_folder(self, start_dir: str = ""):
         """Open native folder picker for backup location."""
         folder = BackupService.choose_folder(start_dir)

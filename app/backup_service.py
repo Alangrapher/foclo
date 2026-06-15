@@ -25,6 +25,7 @@ class BackupService:
         self._lock = threading.Lock()
         self._stopped = False               # BUG 1: guard against scheduling after stop
         self._consecutive_failures = 0       # BUG 9: track silent backup failures
+        self._last_backup_time: str | None = None  # ISO timestamp of last successful backup
 
     # ── lifecycle ──────────────────────────────────────────
 
@@ -50,6 +51,7 @@ class BackupService:
         try:
             self._do_backup()
             self._consecutive_failures = 0   # BUG 9: reset on success
+            self._last_backup_time = datetime.now().isoformat()
         except Exception:
             # BUG 9: at minimum print the exception and track failures
             self._consecutive_failures += 1
@@ -61,6 +63,13 @@ class BackupService:
                     self._schedule_next()
 
     # ── core backup ────────────────────────────────────────
+
+    def get_status(self) -> dict:
+        """Return backup health: consecutive failures, last backup time."""
+        return {
+            "consecutive_failures": self._consecutive_failures,
+            "last_backup": self._last_backup_time,
+        }
 
     def backup_now(self) -> tuple[bool, str]:
         """Manual backup trigger. Returns (ok, path|error)."""
