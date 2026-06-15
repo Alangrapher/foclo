@@ -45,7 +45,7 @@
       <div class="page-header">
         <div>
           <div class="page-title">Timer</div>
-          <div class="page-sub">Today · 2026-06-12 &nbsp; Week 24 (Mon–Fri)</div>
+          <div class="page-sub">Today</div>
         </div>
         <div class="header-actions">
           <button class="btn btn-secondary btn-sm" id="compactBtn" title="Compact mode"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 15 6 6m-6-6v4.8m0-4.8h4.8"/><path d="M9 19.8V15m0 0H4.2M9 15l-6 6"/><path d="M15 4.2V9m0 0h4.8M15 9l6-6"/><path d="M9 4.2V9m0 0H4.2M9 9 3 3"/></svg></button>
@@ -149,7 +149,7 @@
         </div>
         <!-- Inline add form row -->
         <div class="records-add-row" id="recordsAddRow">
-          <input type="date" id="recordsDateField" class="records-add-date" value="2026-06-12" style="flex:0 0 110px; border-bottom-style:solid; display:none;">
+          <input type="date" id="recordsDateField" class="records-add-date" style="flex:0 0 110px; border-bottom-style:solid; display:none;">
           <select class="records-add-subject" style="flex:0.7;">
             <option>Code Review</option><option>Design System</option><option>Documentation</option><option>Meeting</option><option>Research</option>
           </select>
@@ -197,7 +197,7 @@
           </div>
         </div>
         <div class="card">
-          <div class="form-row"><div class="form-label">Date Range</div><div style="display:flex;gap:8px;"><input id="export-start" class="form-input" value="2026-06-05" style="flex:1;"><span style="color:var(--muted);align-self:center;">→</span><input id="export-end" class="form-input" value="2026-06-12" style="flex:1;"></div></div>
+          <div class="form-row"><div class="form-label">Date Range</div><div style="display:flex;gap:8px;"><input id="export-start" class="form-input" style="flex:1;"><span style="color:var(--muted);align-self:center;">→</span><input id="export-end" class="form-input" style="flex:1;"></div></div>
           <div class="form-row"><div class="form-label">Format</div><div style="display:flex;gap:8px;" id="export-format-group"><button class="btn btn-secondary active" data-format="xlsx">Excel (.xlsx)</button><button class="btn btn-secondary" data-format="md">Markdown</button><button class="btn btn-secondary" data-format="json">JSON</button></div></div>
           <button class="btn btn-primary" style="width:100%;margin-top:4px;"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1"/><path d="M2 13h10"/><path d="m9 16 3-3-3-3"/></svg> Export</button>
         </div>

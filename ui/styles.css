@@ -130,8 +130,11 @@ body {
 }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover { background: var(--accent-h); }
+.btn-primary.btn-switch { background: var(--paused); color: #1B1F2A; }
+.btn-primary.btn-switch:hover { background: color-mix(in srgb, var(--paused) 85%, #fff); }
 .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
 .btn-secondary:hover { background: var(--hover); }
+.btn:disabled { opacity: 0.58; cursor: wait; pointer-events: none; }
 .btn-sm { padding: 5px 12px; font-size: 11px; }
 .btn-close { color: var(--muted); }
 .btn-close:hover { color: #cc2200; }
@@ -149,6 +152,20 @@ body {
 .records-table th { text-align: left; padding: 8px 10px; color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid var(--border); }
 .records-table td { padding: 9px 10px; color: var(--text); border-bottom: 1px solid var(--border); }
 .records-table tr:last-child td { border-bottom: none; }
+.cell-subj, .cell-desc {
+  min-width: 0;
+  max-width: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cell-desc {
+  word-break: break-word;
+}
+.table-empty {
+  max-width: none;
+  white-space: normal;
+}
 
 /* Page */
 .page-header { margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-end; }
@@ -239,6 +256,12 @@ html.showing-compact body {
 .todo-item.done .todo-checkmark path { stroke: #fff; }
 .todo-item-info { flex: 1; min-width: 0; }
 .todo-item-subject { font-size: 13px; font-weight: 600; color: var(--text); }
+.todo-item-subject {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
 .todo-item-desc { font-size: 11px; color: var(--text2); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .todo-item-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
 .todo-item .btn { flex-shrink: 0; }
@@ -311,6 +334,12 @@ tr.records-editing td input:focus, tr.records-editing td select:focus { outline:
 .subject-row:hover { background: var(--hover); }
 .subject-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .subject-name { font-size: 13px; color: var(--text); flex: 1; }
+.subject-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
 .subject-actions { display: flex; gap: 4px; visibility: hidden; }
 .subject-row:hover .subject-actions { visibility: visible; }
 .act { color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px 4px; border-radius: 4px; }
@@ -496,3 +525,34 @@ html.dark .window { border-color: #30363D; box-shadow: 0 12px 48px rgba(0,0,0,0.
 .modal-rule-en { font-family: 'Apple Chancery', 'Snell Roundhand', cursive; font-size: 10px; color: var(--text2); margin-top: 1px; text-align: center; }
 .modal-signature { text-align: center; font-family: 'Apple Chancery', 'Snell Roundhand', cursive; font-size: 15px; color: var(--accent); margin: 14px 0 18px; }
 .modal-close { display: none; }
+
+.empty-state {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 18px 8px;
+  text-align: center;
+}
+
+#apiErrorBanner {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translate(-50%, 10px);
+  z-index: 2000;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.4;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s, transform 0.16s;
+}
+
+#apiErrorBanner.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
