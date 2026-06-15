@@ -88,17 +88,28 @@ class Api:
 
     # ── Timer ──────────────────────────────────────────
 
+    def _validate_slot(self, index: int) -> dict | None:
+        if 0 <= index < len(self.engine.slots):
+            return None
+        return {"ok": False, "error": f"Invalid slot index: {index}"}
+
     def start_slot(self, index: int, subject_id: int | None = None):
+        if err := self._validate_slot(index):
+            return err
         self.engine.start(index, subject_id)
         self._refresh_tray()
         return {"ok": True, "slot": self.engine.get_slot(index).to_dict()}
 
     def pause_slot(self, index: int):
+        if err := self._validate_slot(index):
+            return err
         self.engine.pause(index)
         self._refresh_tray()
         return {"ok": True, "slot": self.engine.get_slot(index).to_dict()}
 
     def archive_slot(self, index: int, subject_id: int | None = None, description: str = ""):
+        if err := self._validate_slot(index):
+            return err
         if subject_id is not None:
             self.engine.slots[index].subject_id = subject_id
         if description:
@@ -108,12 +119,16 @@ class Api:
         return {"ok": True, "record_id": record_id}
 
     def get_slot_state(self, index: int):
+        if err := self._validate_slot(index):
+            return err
         return self.engine.get_slot(index).to_dict()
 
     def get_all_slots(self):
         return [s.to_dict() for s in self.engine.slots]
 
     def get_display_time(self, index: int):
+        if err := self._validate_slot(index):
+            return "00:00:00"
         return self.engine.get_display_time(index)
 
     def add_slot(self):
@@ -121,10 +136,14 @@ class Api:
         return {"ok": ok, "count": self.engine.get_slot_count()}
 
     def remove_slot(self, index: int):
+        if err := self._validate_slot(index):
+            return err
         ok = self.engine.remove_slot(index)
         return {"ok": ok, "count": self.engine.get_slot_count()}
 
     def set_description(self, index: int, description: str):
+        if err := self._validate_slot(index):
+            return err
         self.engine.set_description(index, description)
         return {"ok": True}
 
