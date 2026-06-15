@@ -139,7 +139,9 @@ class TimerEngine:
         if slot.status != "idle":
             self.archive(index)
         self.slots.pop(index)
-        # Reindex
+        # Reindex live slots. Note: historical records' slot_index values
+        # become stale after pop — they are best-effort references, not
+        # guaranteed to match the current slot layout.
         for i, s in enumerate(self.slots):
             s.index = i
         self._sync_slot_state_table()
