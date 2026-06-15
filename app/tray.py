@@ -84,7 +84,7 @@ class _TrayTarget(NSObject):
         if _check_active_standalone():
             self._showQuitAlert()
         else:
-            self._window.destroy()
+            AppKit.NSApp.terminate_(None)
 
     def refreshIcon_(self, _timer):
         """Called by NSTimer every 2s — swap icon based on timer state."""
@@ -114,10 +114,10 @@ class _TrayTarget(NSObject):
                 )
                 err_alert.setAlertStyle_(AppKit.NSAlertStyleWarning)
                 err_alert.runModal()
-            self._window.destroy()
+            AppKit.NSApp.terminate_(None)
         elif response == AppKit.NSAlertThirdButtonReturn:   # Pause
             _pause_all()
-            self._window.destroy()
+            AppKit.NSApp.terminate_(None)
 
 
 # ── TrayIcon ─────────────────────────────────────────────

@@ -38,8 +38,14 @@ class Api:
         return {"ok": True, "width": int(width), "height": int(height)}
 
     def quit_app(self):
-        if self.window:
-            self.window.destroy()
+        # Defer process exit to background thread so the JS bridge
+        # call can return first. Calling anything Cocoa/AppKit from
+        # inside a JS→Py bridge callback risks deadlock because the
+        # JS thread is blocked waiting for this call to complete.
+        # os._exit(0) is safe: timers already paused/archived by the
+        # time this is called, so no data loss — WAL is crash-safe.
+        import os, threading
+        threading.Timer(0.05, lambda: os._exit(0)).start()
         return {"ok": True}
 
     def hide_window(self):
