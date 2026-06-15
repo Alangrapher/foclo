@@ -5,7 +5,7 @@ import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 
-DB_PATH = Path(__file__).resolve().parent.parent / "data" / "alangrapher.db"
+DB_PATH = Path.home() / "Library" / "Application Support" / "Alangrapher" / "alangrapher.db"
 
 
 def get_conn() -> sqlite3.Connection:
@@ -28,6 +28,13 @@ def db_connection():
 
 def init_db():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    # One-time migration: move legacy DB from project dir to Application Support
+    _legacy_path = Path(__file__).resolve().parent.parent / "data" / "alangrapher.db"
+    if not DB_PATH.exists() and _legacy_path.exists():
+        import shutil
+        shutil.copy2(str(_legacy_path), str(DB_PATH))
+
     with db_connection() as conn:
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS subjects (

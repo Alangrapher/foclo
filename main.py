@@ -6,6 +6,7 @@ Python handles timer engine, SQLite, and system tray.
 from __future__ import annotations
 
 import os
+import sys
 import webview
 from app.bridge import Api
 from app.storage import init_db
@@ -13,7 +14,22 @@ from app.tray import TrayIcon
 from app.backup_service import BackupService
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
-UI_DIR = os.path.join(PROJECT_DIR, "ui")
+
+
+def _resource_path(relative_path: str) -> str:
+    """Get abs path, works for dev and PyInstaller (onedir or onefile)."""
+    base = getattr(sys, "_MEIPASS", None)
+    if base:
+        return os.path.join(base, relative_path)
+    exe_dir = os.path.dirname(sys.executable)
+    # macOS .app bundle: data files in ../Resources/
+    resources = os.path.join(exe_dir, "..", "Resources", relative_path)
+    if os.path.exists(resources):
+        return resources
+    return os.path.join(exe_dir, relative_path)
+
+
+UI_DIR = _resource_path("ui")
 INDEX_PATH = os.path.join(UI_DIR, "index.html")
 CSS_PATH = os.path.join(UI_DIR, "styles.css")
 JS_PATH = os.path.join(UI_DIR, "app.js")

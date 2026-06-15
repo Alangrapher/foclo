@@ -1,4 +1,20 @@
 let pyApi = window.pywebview ? window.pywebview.api : null;
+
+// localStorage wrapper — pywebview html= mode uses about:blank origin,
+// which WebKit blocks as insecure, throwing "The operation is insecure".
+const safeStorage = {
+  get(key, fallback = null) {
+    try { const v = localStorage.getItem(key); return v !== null ? v : fallback; }
+    catch(e) { return fallback; }
+  },
+  set(key, val) {
+    try { localStorage.setItem(key, val); } catch(e) {}
+  },
+  remove(key) {
+    try { localStorage.removeItem(key); } catch(e) {}
+  }
+};
+
 const proto = document.getElementById('prototype');
 const compactBtn = document.getElementById('compactBtn');
 const expandBtn = document.getElementById('expandBtn');
@@ -121,7 +137,7 @@ function bindStaticControls() {
   document.querySelectorAll('.nav-item[data-page]').forEach(item => item.addEventListener('click', () => switchPage(item.dataset.page)));
   compactBtn.addEventListener('click', enterCompact);
   expandBtn.addEventListener('click', exitCompact);
-  closeBtn.addEventListener('click', async () => { 
+  closeBtn.addEventListener('click', async () => {
     if (!pyApi) return;
     if (minimizeToTray) {
       await callApi(pyApi.hide_window(), 'Hide window');
@@ -604,7 +620,7 @@ function renderCompact() {
 }
 
 function enterCompact() {
-  localStorage.setItem('alangrapher.compact', '1');
+  safeStorage.set('alangrapher.compact', '1');
   document.documentElement.classList.add('showing-compact');
   proto.classList.add('showing-compact');
   document.querySelector('.sidebar').style.display = 'none';
@@ -618,7 +634,7 @@ function enterCompact() {
 }
 
 function exitCompact() {
-  localStorage.setItem('alangrapher.compact', '0');
+  safeStorage.set('alangrapher.compact', '0');
   document.documentElement.classList.remove('showing-compact');
   proto.classList.remove('showing-compact');
   document.querySelector('.sidebar').style.display = '';
@@ -658,10 +674,10 @@ function toggleThemeClick() {
 }
 
 function restoreUiPreferences() {
-  const storedTheme = localStorage.getItem('alangrapher.theme') || 'light';
-  previousTheme = localStorage.getItem('alangrapher.previousTheme') || 'light';
+  const storedTheme = safeStorage.get('alangrapher.theme', 'light');
+  previousTheme = safeStorage.get('alangrapher.previousTheme', 'light');
   applyTheme(storedTheme, false);
-  compactRestorePending = localStorage.getItem('alangrapher.compact') === '1';
+  compactRestorePending = safeStorage.get('alangrapher.compact') === '1';
 }
 
 function applyTheme(theme, persist = true) {
@@ -676,8 +692,8 @@ function applyTheme(theme, persist = true) {
   darkToggle.style.borderColor = isMoss ? '#cc2200' : '';
   updateDarkButton();
   if (persist) {
-    localStorage.setItem('alangrapher.theme', theme);
-    localStorage.setItem('alangrapher.previousTheme', previousTheme);
+    safeStorage.set('alangrapher.theme', theme);
+    safeStorage.set('alangrapher.previousTheme', previousTheme);
   }
 }
 
