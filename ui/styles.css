@@ -394,9 +394,16 @@ html.moss .btn-primary:hover {
 html.moss .btn-secondary {
   border: 1px solid #d5c8c5; color: #1a1a1f;
   border-left: 3px solid #cc2200;
+  border-radius: 0;
 }
 html.moss .btn-secondary:hover {
   background: #f0e8e6;
+}
+/* Moss: Settings buttons — uniform size, square corners */
+html.moss #page-settings .setting-row .btn {
+  min-width: 88px; padding: 5px 12px; font-size: 11px;
+  border-radius: 0 !important;
+  text-align: center;
 }
 html.moss .badge.running {
   background: rgba(204,34,0,0.12); color: #cc2200;
@@ -436,9 +443,12 @@ html.moss .compact-expand { border-radius: 0; }
 html.moss .badge { border-radius: 0; }
 html.moss .chip { border-radius: 0; }
 html.moss .add-slot-btn { border-radius: 0; }
-html.moss .toggle-slider { border-radius: 0; }
+html.moss .toggle-slider { border-radius: 0; height: 24px; }
+html.moss .toggle-slider::before { border-radius: 0; bottom: 4px; }
+html.moss .toggle { height: 24px; }
 html.moss .form-input,
 html.moss .form-select { border-radius: 0; }
+html.moss #page-settings .setting-row .form-select { width: 100px !important; }
 /* Moss: confirm-btn — square corners */
 html.moss .confirm-btn { border-radius: 0; }
 /* Moss: todo checkbox — square corners */
