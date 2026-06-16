@@ -105,19 +105,18 @@ class TimerEngine:
                 (slot.subject_id, slot.description, start, end, int(total_s), index),
             )
             record_id = cur.lastrowid
+            # Reset slot
+            slot.status = "idle"
+            slot.subject_id = None
+            slot.description = ""
+            slot.elapsed_s = 0.0
+            slot.started_at = None
+            slot.started_at_real = None
+            self._save_slot(slot)
             conn.commit()
+            return record_id
         finally:
             conn.close()
-
-        # Reset slot
-        slot.status = "idle"
-        slot.subject_id = None
-        slot.description = ""
-        slot.elapsed_s = 0.0
-        slot.started_at = None
-        slot.started_at_real = None
-        self._save_slot(slot)
-        return record_id
 
     def set_description(self, index: int, description: str):
         self.slots[index].description = description
