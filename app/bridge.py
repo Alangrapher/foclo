@@ -118,6 +118,13 @@ class Api:
         self._refresh_tray()
         return {"ok": True, "record_id": record_id}
 
+    def clear_slot(self, index: int):
+        if err := self._validate_slot(index):
+            return err
+        self.engine.clear(index)
+        self._refresh_tray()
+        return {"ok": True, "slot": self.engine.get_slot(index).to_dict()}
+
     def get_slot_state(self, index: int):
         if err := self._validate_slot(index):
             return err
@@ -180,8 +187,8 @@ class Api:
     def get_todos(self):
         return get_todos()
 
-    def add_todo(self, subject: str, description: str):
-        return add_todo(subject, description)
+    def add_todo(self, subject: str, description: str, subject_id: int | None = None):
+        return add_todo(subject, description, subject_id)
 
     def toggle_todo(self, todo_id: int):
         return toggle_todo(todo_id)
@@ -257,7 +264,7 @@ class Api:
 
     def restore_backup(self, backup_path: str):
         """Restore from backup file, then quit the app."""
-        ok, detail = BackupService.restore_backup(backup_path)
+        ok, detail = self._backup.restore_backup(backup_path, self.engine)
         if ok and self.window:
             self.window.destroy()
         return {"ok": ok, "path": detail} if ok else {"ok": False, "error": detail}

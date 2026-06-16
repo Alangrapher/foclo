@@ -105,18 +105,22 @@ class TimerEngine:
                 (slot.subject_id, slot.description, start, end, int(total_s), index),
             )
             record_id = cur.lastrowid
-            # Reset slot
-            slot.status = "idle"
-            slot.subject_id = None
-            slot.description = ""
-            slot.elapsed_s = 0.0
-            slot.started_at = None
-            slot.started_at_real = None
-            self._save_slot(slot)
+            self.clear(index)
             conn.commit()
             return record_id
         finally:
             conn.close()
+
+    def clear(self, index: int):
+        """Reset a slot without archiving it."""
+        slot = self.slots[index]
+        slot.status = "idle"
+        slot.subject_id = None
+        slot.description = ""
+        slot.elapsed_s = 0.0
+        slot.started_at = None
+        slot.started_at_real = None
+        self._save_slot(slot)
 
     def set_description(self, index: int, description: str):
         self.slots[index].description = description

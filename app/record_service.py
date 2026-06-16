@@ -50,16 +50,21 @@ def get_records(filter: str = "today") -> list[dict]:
     ]
 
 
-def _parse_dt(value: str) -> datetime:
+def _parse_dt(value: str) -> datetime | None:
     try:
         return datetime.fromisoformat(value)
     except ValueError:
-        return datetime.fromisoformat(f"{datetime.now().date()}T{value}:00")
+        try:
+            return datetime.fromisoformat(f"{datetime.now().date()}T{value}:00")
+        except ValueError:
+            return None
 
 
 def add_record(subject_id: int, description: str, start_time: str, end_time: str) -> dict:
     start_dt = _parse_dt(start_time)
     end_dt = _parse_dt(end_time)
+    if start_dt is None or end_dt is None:
+        return {"ok": False, "error": "Invalid start/end time"}
     if end_dt < start_dt:
         end_dt = end_dt + timedelta(days=1)
     duration_s = max(0, int((end_dt - start_dt).total_seconds()))
@@ -100,6 +105,8 @@ def update_record(record_id: int, **kwargs) -> dict:
         final_end = updates.get("end_time", row["end_time"])
         start_dt = _parse_dt(final_start)
         end_dt = _parse_dt(final_end)
+        if start_dt is None or end_dt is None:
+            return {"ok": False, "error": "Invalid start/end time"}
         if end_dt < start_dt:
             end_dt = end_dt + timedelta(days=1)
         duration_s = max(0, int((end_dt - start_dt).total_seconds()))

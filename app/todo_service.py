@@ -8,21 +8,34 @@ def get_todos() -> list[dict]:
     conn = get_conn()
     try:
         rows = conn.execute(
-            "SELECT id, subject, description, status FROM todos WHERE status != 'archived' ORDER BY sort_order"
+            """
+            SELECT t.id, t.subject_id, COALESCE(s.name, t.subject) AS subject, t.description, t.status
+            FROM todos t
+            LEFT JOIN subjects s ON t.subject_id=s.id
+            WHERE t.status != 'archived'
+            ORDER BY t.sort_order
+            """
         ).fetchall()
         return [
-            {"id": r["id"], "subject": r["subject"], "description": r["description"], "status": r["status"]}
+            {
+                "id": r["id"],
+                "subject_id": r["subject_id"],
+                "subject": r["subject"],
+                "description": r["description"],
+                "status": r["status"],
+            }
             for r in rows
         ]
     finally:
         conn.close()
 
 
-def add_todo(subject: str, description: str) -> dict:
+def add_todo(subject: str, description: str, subject_id: int | None = None) -> dict:
     conn = get_conn()
     try:
         cur = conn.execute(
-            "INSERT INTO todos (subject, description) VALUES (?, ?)", (subject, description)
+            "INSERT INTO todos (subject, subject_id, description) VALUES (?, ?, ?)",
+            (subject, subject_id, description),
         )
         conn.commit()
         return {"ok": True, "id": cur.lastrowid}

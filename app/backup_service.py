@@ -159,8 +159,7 @@ class BackupService:
             return str(panel.URL().path())
         return None
 
-    @staticmethod
-    def restore_backup(backup_path: str) -> tuple[bool, str]:
+    def restore_backup(self, backup_path: str, engine=None) -> tuple[bool, str]:
         """Validate and restore a backup file. Returns (ok, detail)."""
         if not os.path.isfile(backup_path):
             return False, f"File not found: {backup_path}"
@@ -178,6 +177,20 @@ class BackupService:
                 return False, f"Not a valid Alangrapher backup: missing tables {missing}"
         except sqlite3.Error as e:
             return False, f"Invalid database file: {e}"
+
+        # Stop the backup timer and pause all slots so no writes hit the DB
+        self.stop()
+        if engine is not None:
+            for slot in engine.slots:
+                if slot.status in ("running", "paused"):
+                    engine.pause(slot.slot_index)
+
+        # Checkpoint WAL and close any live connections before overwriting
+        live_conn = sqlite3.connect(str(DB_PATH))
+        try:
+            live_conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        finally:
+            live_conn.close()
 
         # Copy backup over the live DB
         import shutil

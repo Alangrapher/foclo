@@ -62,6 +62,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS todos (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 subject     TEXT DEFAULT '',
+                subject_id  INTEGER REFERENCES subjects(id),
                 description TEXT DEFAULT '',
                 status      TEXT NOT NULL DEFAULT 'pending',
                 sort_order  INTEGER NOT NULL DEFAULT 0,
@@ -100,6 +101,10 @@ def init_db():
         # Migration: add started_at_real column for crash-safe archive accuracy
         try:
             conn.execute("ALTER TABLE slot_state ADD COLUMN started_at_real TEXT")
+        except sqlite3.OperationalError:
+            pass  # column already exists
+        try:
+            conn.execute("ALTER TABLE todos ADD COLUMN subject_id INTEGER REFERENCES subjects(id)")
         except sqlite3.OperationalError:
             pass  # column already exists
         conn.commit()

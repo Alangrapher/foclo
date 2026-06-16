@@ -71,11 +71,13 @@ def _collect_data(start_date: date | None, end_date: date | None) -> dict:
     subjects = get_subjects()
     subject_map = {s["id"]: s for s in subjects}
     conn2 = get_conn()
-    archived_rows = conn2.execute(
-        "SELECT id, name FROM subjects WHERE archived = 1 AND id IN ("
-        "SELECT DISTINCT subject_id FROM records WHERE subject_id IS NOT NULL)"
-    ).fetchall()
-    conn2.close()
+    try:
+        archived_rows = conn2.execute(
+            "SELECT id, name FROM subjects WHERE archived = 1 AND id IN ("
+            "SELECT DISTINCT subject_id FROM records WHERE subject_id IS NOT NULL)"
+        ).fetchall()
+    finally:
+        conn2.close()
     for r in archived_rows:
         if r["id"] not in subject_map:
             subject_map[r["id"]] = dict(r)
