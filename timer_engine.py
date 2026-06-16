@@ -65,6 +65,7 @@ class TimerEngine:
         for s in self.slots:
             if s.status == "running":
                 self._pause_slot(s)
+                self._save_slot(s)
         slot = self.slots[index]
         slot.status = "running"
         slot.subject_id = subject_id
