@@ -333,16 +333,10 @@ tr.records-editing td input:focus, tr.records-editing td select:focus { outline:
 .subject-row:last-child { border-bottom: none; }
 .subject-row:hover { background: var(--hover); }
 .subject-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.subject-name { font-size: 13px; color: var(--text); flex: 1; }
-.subject-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-.subject-actions { display: flex; gap: 4px; visibility: hidden; }
+.subject-name { font-size: 13px; color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.subject-actions { display: flex; align-items: center; gap: 4px; visibility: hidden; }
 .subject-row:hover .subject-actions { visibility: visible; }
-.act { color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px 4px; border-radius: 4px; }
+.act { display: inline-flex; align-items: center; justify-content: center; color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px 4px; border-radius: 4px; }
 .act:hover { color: var(--text); background: var(--hover); }
 
 /* Settings list */
