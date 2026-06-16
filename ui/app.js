@@ -180,6 +180,7 @@ function bindStaticControls() {
   quickAddModal.addEventListener('click', e => { if (e.target === quickAddModal) closeQuickAddSubjectModal(); });
   quitModal.addEventListener('click', e => { if (e.target === quitModal) closeQuitModal(); });
   document.getElementById('resetConfirmModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeResetModal(); });
+  document.getElementById('switchTimerModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeSwitchTimerModal(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllModals(); });
   document.querySelectorAll('#page-export .btn-secondary').forEach(btn => btn.addEventListener('click', () => {
     document.querySelectorAll('#page-export .btn-secondary').forEach(b => b.classList.remove('active'));
@@ -356,6 +357,7 @@ function timerCard(slot) {
   const isPending = !!slot.pendingAction;
   const hasRunningOther = slots.some(s => s.index !== index && s.status === 'running');
   const isSwitch = status !== 'running' && hasRunningOther;
+  const subjectDisabled = status !== 'idle';
   const actionText = status === 'running' ? 'Pause' : status === 'paused' ? (isSwitch ? 'Switch' : 'Resume') : (isSwitch ? 'Switch' : 'Start');
   const iconPath = status === 'running'
     ? '<rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/>'
@@ -374,8 +376,8 @@ function timerCard(slot) {
     </div>
     <div class="timer-clock"${slot.collapsed ? ' style="display:none"' : ''}>${slot.display_time || '00:00:00'}</div>
     <div class="timer-subject-line"${slot.collapsed ? ' style="display:none"' : ''}>${subj ? esc(subj.name) : '—'}${slot.description ? ' — ' + esc(slot.description) : ''}</div>
-    <div class="form-row"${slot.collapsed ? ' style="display:none"' : ''}><div class="form-label">Subject</div><div class="select-wrapper"><select class="form-select" onchange="setSlotSubject(${index}, this.value)">${subjectOptions(slot.subject_id)}</select></div></div>
-    <div class="form-row"${slot.collapsed ? ' style="display:none"' : ''}><div class="form-label">Description (optional)</div><input class="form-input" placeholder="What are you working on?" value="${attr(slot.description || '')}" oninput="setSlotDescription(${index}, this.value)"></div>
+    <div class="form-row"${slot.collapsed ? ' style="display:none"' : ''}><div class="form-label">Subject</div><div class="select-wrapper"><select class="form-select" onchange="setSlotSubject(${index}, this.value)"${subjectDisabled ? ' disabled' : ''}>${subjectOptions(slot.subject_id)}</select></div></div>
+    <div class="form-row"${slot.collapsed ? ' style="display:none"' : ''}><div class="form-label">Description (optional)</div><input class="form-input" placeholder="What are you working on?" value="${attr(slot.description || '')}" oninput="setSlotDescription(${index}, this.value)"${subjectDisabled ? ' disabled' : ''}></div>
     <div class="btn-row"${slot.collapsed ? ' style="display:none"' : ''}>
       <button class="btn btn-primary${isSwitch ? ' btn-switch' : ''}" style="flex:1;" onclick="primaryTimerAction(${index})"${isPending ? ' disabled' : ''}><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${iconPath}</svg>${isPending ? 'Working...' : actionText}</button>
       <button class="btn btn-secondary" style="flex:1;" onclick="archiveSlot(${index})"${isPending ? ' disabled' : ''}><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 15h18"/><path d="m15 8-3 3-3-3"/></svg>Archive</button>
@@ -392,10 +394,30 @@ async function primaryTimerAction(index) {
 async function startSlot(index, values = null) {
   if (!slots[index] || slots[index].pendingAction) return;
   const hasRunningOther = slots.some(s => s.index !== index && s.status === 'running');
-  if (hasRunningOther && !values && !confirm('This will pause the current timer. Continue?')) return;
+  if (hasRunningOther && !values) {
+    const runningSlot = slots.find(s => s.status === 'running');
+    const subj = subjectById(runningSlot.subject_id);
+    document.getElementById('switchTimerMsg').textContent =
+      '"' + (subj ? subj.name : 'Timer ' + (runningSlot.index + 1)) + '" is running. Switch to this timer?';
+    document.getElementById('switchTimerConfirmBtn').onclick = async () => {
+      closeSwitchTimerModal();
+      await _doStartSlot(index, null);
+    };
+    showModal(document.getElementById('switchTimerModal'));
+    return;
+  }
+  await _doStartSlot(index, values);
+}
+
+async function _doStartSlot(index, values) {
+  if (!slots[index]) return;
   slots[index].pendingAction = true;
-  renderTimer(); renderCompact();
+  // In-place button update — don't destroy/recreate DOM (breaks clock refresh)
   const card = document.querySelector(`.timer-slot-card[data-slot="${index}"]`);
+  if (card) {
+    const btn = card.querySelector('.btn-primary');
+    if (btn) { btn.disabled = true; btn.innerHTML = btn.innerHTML.replace(/>[^<]+</, '>Working...<'); }
+  }
   const sid = values && Object.prototype.hasOwnProperty.call(values, 'subject_id')
     ? values.subject_id
     : (card ? Number(card.querySelector('.form-select').value) || null : slots[index].subject_id);
@@ -415,6 +437,7 @@ async function startSlot(index, values = null) {
     }
   } finally {
     if (slots[index]) slots[index].pendingAction = false;
+    startClockInterval();
     renderTimer(); renderCompact();
   }
 }
@@ -422,7 +445,12 @@ async function startSlot(index, values = null) {
 async function pauseSlot(index) {
   if (!slots[index] || slots[index].pendingAction) return;
   slots[index].pendingAction = true;
-  renderTimer(); renderCompact();
+  // In-place button update — don't destroy/recreate DOM
+  const card = document.querySelector(`.timer-slot-card[data-slot="${index}"]`);
+  if (card) {
+    const btn = card.querySelector('.btn-primary');
+    if (btn) { btn.disabled = true; btn.innerHTML = btn.innerHTML.replace(/>[^<]+</, '>Working...<'); }
+  }
   try {
     if (window.pywebview && window.pywebview.api) {
       const result = await callApi(window.pywebview.api.pause_slot(index), 'Pause timer');
@@ -431,6 +459,7 @@ async function pauseSlot(index) {
     } else pauseLocal(slots[index]);
   } finally {
     if (slots[index]) slots[index].pendingAction = false;
+    startClockInterval();
     renderTimer(); renderCompact();
   }
 }
@@ -1203,6 +1232,10 @@ function resetAllData() {
 
 function closeResetModal() {
   document.getElementById('resetConfirmModal').classList.remove('show');
+}
+
+function closeSwitchTimerModal() {
+  document.getElementById('switchTimerModal').classList.remove('show');
 }
 
 async function doResetAllData() {

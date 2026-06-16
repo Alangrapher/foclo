@@ -108,6 +108,8 @@ body {
   font-size: 13px; font-family: inherit;
 }
 .form-select:focus, .form-input:focus { outline: none; border-color: var(--accent); }
+.form-select:disabled { opacity: 0.45; cursor: not-allowed; background: var(--hover); }
+.form-input:disabled { opacity: 0.45; cursor: not-allowed; background: var(--hover); }
 .form-select {
   appearance: none; -webkit-appearance: none;
   background-image: none;
