@@ -219,7 +219,8 @@ class Api:
 
             ext_map = {"xlsx": ".xlsx", "md": ".md", "json": ".json"}
             ext = ext_map.get(format, ".xlsx")
-            path = f"/tmp/alangrapher_export_{s_str}_{e_str}{ext}"
+            import tempfile
+            path = f"{tempfile.gettempdir()}/alangrapher_export_{s_str}_{e_str}{ext}"
 
             if format == "md":
                 result = export_markdown(path, start_date=sd, end_date=ed)
