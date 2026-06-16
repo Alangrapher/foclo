@@ -49,6 +49,19 @@ def build_html() -> str:
 
 
 def main():
+    # Startup log for debugging on Windows
+    log_path = os.path.join(os.path.expanduser("~"), "alangrapher_startup.log")
+    try:
+        with open(log_path, "w") as lf:
+            lf.write(f"platform={sys.platform}\n")
+            lf.write(f"exe={sys.executable}\n")
+            lf.write(f"cwd={os.getcwd()}\n")
+            lf.write(f"meipass={getattr(sys, '_MEIPASS', 'none')}\n")
+            lf.write(f"ui_dir={UI_DIR}\n")
+            lf.write(f"index_exists={os.path.exists(INDEX_PATH)}\n")
+    except Exception:
+        pass
+
     init_db()
 
     backup = BackupService()

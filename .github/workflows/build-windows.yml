@@ -3,7 +3,7 @@ name: Build Windows
 on:
   push:
     branches: [main]
-  workflow_dispatch:  # 允许手动触发
+  workflow_dispatch:
 
 jobs:
   build:
@@ -22,7 +22,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install pywebview pyinstaller
 
-      - name: Build exe
+      - name: Build release exe (no console)
         run: |
           pyinstaller `
             --onefile `
@@ -33,8 +33,25 @@ jobs:
             --hidden-import webview.platforms.winforms `
             main.py
 
-      - name: Upload artifact
+      - name: Build debug exe (with console)
+        run: |
+          pyinstaller `
+            --onefile `
+            --console `
+            --name Alangrapher-debug `
+            --add-data "ui;ui" `
+            --hidden-import webview.platforms.edgechromium `
+            --hidden-import webview.platforms.winforms `
+            main.py
+
+      - name: Upload release
         uses: actions/upload-artifact@v4
         with:
           name: Alangrapher-Windows
           path: dist/Alangrapher.exe
+
+      - name: Upload debug
+        uses: actions/upload-artifact@v4
+        with:
+          name: Alangrapher-Windows-DEBUG
+          path: dist/Alangrapher-debug.exe
