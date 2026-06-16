@@ -39,7 +39,7 @@ exe = EXE(
 app = BUNDLE(
     exe,
     name='Alangrapher.app',
-    icon=None,
+    icon='AppIcon.icns',
     bundle_identifier='com.alangrapher.app',
     info_plist={
         'CFBundleName': 'Alangrapher',
