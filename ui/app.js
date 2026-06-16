@@ -546,6 +546,12 @@ async function archiveThenRemove() {
 async function clearAndRemove() {
   const index = pendingRemoveSlot;
   if (index === null || index === undefined) return;
+  if (window.pywebview && window.pywebview.api) {
+    const result = await callApi(window.pywebview.api.clear_slot(index), 'Clear timer slot');
+    if (!result || result.ok === false) return;
+  } else if (slots[index]) {
+    Object.assign(slots[index], {status: 'idle', subject_id: null, description: '', display_time: '00:00:00', elapsed: 0, startedAt: null});
+  }
   await removeSlot(index);
   closeRemoveSlotModal();
 }
@@ -767,15 +773,17 @@ function updateDarkButton() {
 async function addTodo() {
   const subjSelect = document.getElementById('todoSubject');
   const descInput = document.getElementById('todoDesc');
-  const subject = subjSelect.value;
-  if (!subject) return;
+  const subjectId = Number(subjSelect.value) || null;
+  const subj = subjectById(subjectId);
+  if (!subj) return;
+  const subject = subj.name;
   const description = descInput.value.trim();
   if (window.pywebview && window.pywebview.api) {
-    const result = await callApi(window.pywebview.api.add_todo(subject, description), 'Add todo');
+    const result = await callApi(window.pywebview.api.add_todo(subject, description, subjectId), 'Add todo');
     if (!result || result.ok === false) return;
     await loadTodos();
   }
-  else todos.push({id: Date.now(), subject, description, status: 'pending'});
+  else todos.push({id: Date.now(), subject_id: subjectId, subject, description, status: 'pending'});
   subjSelect.value = ''; descInput.value = ''; renderTodos();
 }
 
@@ -795,7 +803,8 @@ async function startTodoTimer(arg) {
   const todo = todos.find(t => Number(t.id) === Number(id));
   if (!todo || todo.status === 'done') return;
   let slot = slots.find(s => s.status === 'idle') || slots[0];
-  let subj = subjects.find(s => s.name === todo.subject);
+  let subj = subjectById(todo.subject_id);
+  if (!subj) subj = subjects.find(s => s.name === todo.subject);
   if (!subj) { subj = {id: null, name: todo.subject, color: '#5E6AD2'}; }
   slot.subject_id = subj.id;
   slot.description = todo.description || '';
@@ -866,8 +875,8 @@ function editRecord(span) {
 
 async function saveEdit(span) {
   const tr = span.closest('tr');
-  let dur = tr.querySelector('.cell-dur input').value.replace(/h$/, '');
-  dur = (parseFloat(dur) || 0).toFixed(1) + 'h';
+  const durSeconds = parseDurationS(tr.querySelector('.cell-dur input').value);
+  const dur = (durSeconds / 3600).toFixed(1) + 'h';
   const dateInput = tr.querySelector('.cell-date input');
   const date = dateInput ? dateInput.value : tr.dataset.date;
   const subjectSelect = tr.querySelector('.cell-subj select');
@@ -930,7 +939,7 @@ function renderSubjects() {
   const addSelect = document.querySelector('.records-add-subject');
   if (addSelect) addSelect.innerHTML = subjects.map(s => `<option>${esc(s.name)}</option>`).join('');
   const todoSelect = document.getElementById('todoSubject');
-  if (todoSelect) todoSelect.innerHTML = '<option value="">— Select —</option>' + subjects.map(s => `<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('');
+  if (todoSelect) todoSelect.innerHTML = '<option value="">— Select —</option>' + subjects.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
   document.querySelector('#page-subjects .page-sub').textContent = `${subjects.length} subjects — manage your activity categories`;
 }
 
@@ -1038,8 +1047,13 @@ function bindSettingsControls() {
     wsSelect.addEventListener('change', async () => {
       weekStart = wsSelect.value;
       if (window.pywebview && window.pywebview.api) {
-        const result = await callApi(window.pywebview.api.update_setting('week_starts_on', weekStart === 'mon' ? 'Monday' : 'Sunday'), 'Update week setting');
-        if (!result || result.ok === false) return;
+        wsSelect.disabled = true;
+        try {
+          const result = await callApi(window.pywebview.api.update_setting('week_starts_on', weekStart === 'mon' ? 'Monday' : 'Sunday'), 'Update week setting');
+          if (!result || result.ok === false) return;
+        } finally {
+          wsSelect.disabled = false;
+        }
       }
       initializeDynamicDates();
       updateTiles();
@@ -1050,7 +1064,14 @@ function bindSettingsControls() {
   if (mtToggle) {
     mtToggle.addEventListener('change', async () => {
       minimizeToTray = mtToggle.checked;
-      if (window.pywebview && window.pywebview.api) await callApi(window.pywebview.api.update_setting('minimize_to_tray', minimizeToTray ? '1' : '0'), 'Update minimize setting');
+      if (window.pywebview && window.pywebview.api) {
+        mtToggle.disabled = true;
+        try {
+          await callApi(window.pywebview.api.update_setting('minimize_to_tray', minimizeToTray ? '1' : '0'), 'Update minimize setting');
+        } finally {
+          mtToggle.disabled = false;
+        }
+      }
     });
   }
 
@@ -1058,7 +1079,14 @@ function bindSettingsControls() {
   if (defaultSlotsSelect) {
     defaultSlotsSelect.addEventListener('change', async e => {
       defaultSlots = e.target.value;
-      if (window.pywebview && window.pywebview.api) await callApi(window.pywebview.api.update_setting('default_slots', defaultSlots), 'Update default slots setting');
+      if (window.pywebview && window.pywebview.api) {
+        defaultSlotsSelect.disabled = true;
+        try {
+          await callApi(window.pywebview.api.update_setting('default_slots', defaultSlots), 'Update default slots setting');
+        } finally {
+          defaultSlotsSelect.disabled = false;
+        }
+      }
     });
   }
 
@@ -1067,7 +1095,12 @@ function bindSettingsControls() {
     abToggle.addEventListener('change', async () => {
       const enabled = abToggle.checked;
       if (window.pywebview && window.pywebview.api) {
-        await callApi(window.pywebview.api.update_setting('auto_backup', enabled ? '1' : '0'), 'Update backup setting');
+        abToggle.disabled = true;
+        try {
+          await callApi(window.pywebview.api.update_setting('auto_backup', enabled ? '1' : '0'), 'Update backup setting');
+        } finally {
+          abToggle.disabled = false;
+        }
       }
       window._autoBackup = enabled;
     });
