@@ -561,9 +561,9 @@ function setSlotSubject(index, value) {
   renderCompact();
 }
 
-function setSlotDescription(index, value) {
+async function setSlotDescription(index, value) {
   slots[index].description = value;
-  if (window.pywebview && window.pywebview.api) callApi(window.pywebview.api.set_description(index, value), 'Update timer description');
+  if (window.pywebview && window.pywebview.api) await callApi(window.pywebview.api.set_description(index, value), 'Update timer description');
   const card = document.querySelector(`.timer-slot-card[data-slot="${index}"]`);
   if (card) {
     const subj = subjectById(slots[index].subject_id);
@@ -593,7 +593,8 @@ function toggleCollapse(el, ev) {
 function renderTodayRecords() {
   const tbody = document.querySelector('#page-timer .records-table tbody');
   if (!tbody) return;
-  tbody.innerHTML = records.length ? records.map(r => `<tr ondblclick="fillRecordToSlot(${r.id})" data-id="${r.id}" data-subject="${attr(r.subject_name || '—')}" data-desc="${attr(r.description || '—')}" data-dur="${attr(r.duration || '0m')}"><td class="cell-subj">${esc(r.subject_name || '—')}</td><td class="cell-desc">${esc(r.description || '—')}</td><td class="cell-dur" style="text-align:right">${esc(r.duration || '0m')}</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted)">No records yet</td></tr>';
+  const todayRecords = records.filter(r => (r.date || '') === todayIso());
+  tbody.innerHTML = todayRecords.length ? todayRecords.map(r => `<tr ondblclick="fillRecordToSlot(${r.id})" data-id="${r.id}" data-subject="${attr(r.subject_name || '—')}" data-desc="${attr(r.description || '—')}" data-dur="${attr(r.duration || '0m')}"><td class="cell-subj">${esc(r.subject_name || '—')}</td><td class="cell-desc">${esc(r.description || '—')}</td><td class="cell-dur" style="text-align:right">${esc(r.duration || '0m')}</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted)">No records yet</td></tr>';
 }
 
 function fillRecordToSlot(id) {
@@ -608,16 +609,21 @@ function fillRecordToSlot(id) {
   renderTimer();
 }
 
-function updateTiles() {
+async function updateTiles() {
   const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
+  const todayStr = todayIso();
   const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
   const offset = weekStart === 'mon' ? (dayOfWeek === 0 ? 6 : dayOfWeek - 1) : dayOfWeek;
   const weekStartDate = new Date(now); weekStartDate.setDate(now.getDate() - offset);
-  const weekStartStr = weekStartDate.toISOString().slice(0, 10);
+  const weekStartStr = formatLocalDate(weekStartDate);
 
   let todayH = 0, weekH = 0;
-  records.forEach(r => {
+  let tileRecords = records;
+  if (window.pywebview && window.pywebview.api) {
+    const result = await callApi(window.pywebview.api.get_records('all'), 'Load records');
+    if (Array.isArray(result)) tileRecords = result;
+  }
+  tileRecords.forEach(r => {
     const h = parseDurationS(r.duration || '0') / 3600;
     const d = r.date || '';
     if (d === todayStr) todayH += h;
