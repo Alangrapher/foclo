@@ -10,7 +10,6 @@ import sys
 import webview
 from app.bridge import Api
 from app.storage import init_db
-from app.tray import TrayIcon
 from app.backup_service import BackupService
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -69,13 +68,18 @@ def main():
     )
     api.set_window(window)
 
-    tray = TrayIcon(window, check_fn=lambda: any(
-        s.status == "running" for s in api.engine.slots
-    ))
-    tray.start()
-    api.set_tray(tray)
+    # Tray icon — macOS only (NSStatusBar + SF Symbols)
+    if sys.platform == "darwin":
+        from app.tray import TrayIcon
+        tray = TrayIcon(window, check_fn=lambda: any(
+            s.status == "running" for s in api.engine.slots
+        ))
+        tray.start()
+        api.set_tray(tray)
+    else:
+        api.set_tray(None)
 
-    webview.start(gui="cocoa")
+    webview.start(gui="cocoa" if sys.platform == "darwin" else None)
 
     # BUG 11: graceful shutdown — stop the backup timer to prevent
     # daemon thread from writing a corrupt half-written backup on exit
