@@ -5,7 +5,9 @@ import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 
-DB_PATH = Path.home() / "Library" / "Application Support" / "Alangrapher" / "alangrapher.db"
+from app.platform_adapter import app_data_dir
+
+DB_PATH = app_data_dir() / "alangrapher.db"
 
 
 def get_conn() -> sqlite3.Connection:

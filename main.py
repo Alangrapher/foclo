@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import sys
+import traceback
 import webview
 from app.bridge import Api
 from app.storage import init_db
@@ -92,7 +93,13 @@ def main():
     else:
         api.set_tray(None)
 
-    webview.start(gui="cocoa" if sys.platform == "darwin" else None)
+    # Windows: force edgechromium; macOS: cocoa; Linux: gtk
+    if sys.platform == "darwin":
+        webview.start(gui="cocoa")
+    elif sys.platform == "win32":
+        webview.start(gui="edgechromium")
+    else:
+        webview.start(gui="gtk")
 
     # BUG 11: graceful shutdown — stop the backup timer to prevent
     # daemon thread from writing a corrupt half-written backup on exit
@@ -100,4 +107,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        log_path = os.path.join(os.path.expanduser("~"), "alangrapher_crash.log")
+        with open(log_path, "w") as f:
+            traceback.print_exc(file=f)
+        raise
