@@ -267,6 +267,7 @@ class Api:
         from app.storage import get_conn
         conn = get_conn()
         try:
+            conn.execute("BEGIN")
             conn.execute("DELETE FROM records")
             conn.execute("DELETE FROM todos")
             conn.execute("DELETE FROM subjects")
@@ -275,6 +276,7 @@ class Api:
             conn.commit()
             return {"ok": True}
         except Exception as e:
+            conn.execute("ROLLBACK")
             return {"ok": False, "error": str(e)}
         finally:
             conn.close()

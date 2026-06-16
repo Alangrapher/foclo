@@ -17,14 +17,18 @@ from Foundation import NSObject
 
 def _check_active_standalone() -> bool:
     """True if any timer slot is running or has elapsed time.
-    Standalone DB read, used by quit confirmation.
+    Read-only DB query — does NOT instantiate TimerEngine.
     """
     try:
-        from app.storage import get_setting
-        from timer_engine import TimerEngine
-        default_slots = int(get_setting("default_slots", "3"))
-        engine = TimerEngine(num_slots=default_slots)
-        return any(s.elapsed_s > 0 or s.status == "running" for s in engine.slots)
+        from app.storage import get_conn
+        conn = get_conn()
+        try:
+            row = conn.execute(
+                "SELECT 1 FROM slot_state WHERE status = 'running' LIMIT 1"
+            ).fetchone()
+            return row is not None
+        finally:
+            conn.close()
     except Exception:
         return True  # fail-safe
 
