@@ -179,6 +179,7 @@ function bindStaticControls() {
   const quickAddModal = document.getElementById('quickAddSubjectModal');
   quickAddModal.addEventListener('click', e => { if (e.target === quickAddModal) closeQuickAddSubjectModal(); });
   quitModal.addEventListener('click', e => { if (e.target === quitModal) closeQuitModal(); });
+  document.getElementById('resetConfirmModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeResetModal(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllModals(); });
   document.querySelectorAll('#page-export .btn-secondary').forEach(btn => btn.addEventListener('click', () => {
     document.querySelectorAll('#page-export .btn-secondary').forEach(b => b.classList.remove('active'));
@@ -1190,6 +1191,24 @@ async function quitArchive() {
   if (pyApi) {
     const result = await callApi(pyApi.archive_all_slots(), 'Archive timers');
     if (!result || result.ok === false) return;
+    await callApi(pyApi.quit_app(), 'Quit app');
+  }
+}
+
+function resetAllData() {
+  if (!pyApi) return;
+  const modal = document.getElementById('resetConfirmModal');
+  showModal(modal);
+}
+
+function closeResetModal() {
+  document.getElementById('resetConfirmModal').classList.remove('show');
+}
+
+async function doResetAllData() {
+  const result = await callApi(pyApi.reset_all_data(), 'Reset all data');
+  if (result && result.ok) {
+    document.getElementById('resetConfirmModal').classList.remove('show');
     await callApi(pyApi.quit_app(), 'Quit app');
   }
 }

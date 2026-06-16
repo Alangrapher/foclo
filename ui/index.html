@@ -238,7 +238,7 @@
           </div>
           <div class="setting-row" style="border-bottom:none;">
             <div class="setting-info"><div class="setting-label" style="color:var(--danger);">Reset All Data</div><div class="setting-desc">Permanently delete all records, todos, subjects, and settings</div></div>
-            <button class="btn btn-sm" style="background:var(--danger);color:#fff;font-weight:600;padding:6px 14px;border-radius:8px;cursor:pointer;border:none;font-size:11px;">Reset</button>
+            <button class="btn btn-sm" style="background:var(--danger);color:#fff;font-weight:600;padding:6px 14px;border-radius:8px;cursor:pointer;border:none;font-size:11px;" onclick="resetAllData()">Reset</button>
           </div>
         </div>
       </div>
@@ -274,7 +274,7 @@
     <div class="remove-slot-msg" style="font-size:13px;color:var(--text2);margin-bottom:18px;">Timer is running.</div>
     <div style="display:flex;gap:10px;justify-content:center;">
       <button class="btn btn-secondary" style="flex:1;" onclick="closeRemoveSlotModal()">Cancel</button>
-      <button class="btn btn-sm" style="flex:1;background:var(--danger);color:#fff;font-weight:600;cursor:pointer;border:none;border-radius:8px;padding:8px 14px;font-size:12px;" onclick="clearAndRemove()">Clear</button>
+      <button class="btn btn-sm" style="flex:1;background:var(--danger);color:#fff;font-weight:600;cursor:pointer;border:none;padding:8px 14px;font-size:12px;" onclick="clearAndRemove()">Clear</button>
       <button class="btn btn-primary" style="flex:1;" onclick="archiveThenRemove()">Archive</button>
     </div>
   </div>
@@ -301,6 +301,21 @@
       <button class="btn btn-secondary" style="flex:1;" onclick="closeQuitModal()">Cancel</button>
       <button class="btn btn-sm" style="flex:1;background:var(--danger);color:#fff;font-weight:600;cursor:pointer;border:none;border-radius:8px;padding:8px 14px;font-size:12px;" id="quitKeepBtn">Pause</button>
       <button class="btn btn-primary" style="flex:1;" id="quitArchiveBtn">Archive</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset All Data confirmation modal -->
+<div class="modal-overlay" id="resetConfirmModal">
+  <div class="modal-card" style="width:380px;text-align:center;">
+    <div class="modal-title" style="font-size:16px;margin-bottom:14px;">Reset All Data</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:22px;line-height:1.6;">
+      Delete <strong>all</strong> records, todos, subjects, and settings.<br>
+      This action <strong style="color:var(--danger);">cannot be undone</strong>.
+    </div>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button class="btn btn-secondary" style="flex:1;" onclick="closeResetModal()">Cancel</button>
+      <button class="btn btn-sm" style="flex:1;background:var(--danger);color:#fff;font-weight:600;cursor:pointer;border:none;border-radius:8px;padding:8px 14px;font-size:12px;" onclick="doResetAllData()">Reset</button>
     </div>
   </div>
 </div>

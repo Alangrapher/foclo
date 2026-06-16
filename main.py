@@ -21,11 +21,15 @@ def _resource_path(relative_path: str) -> str:
     base = getattr(sys, "_MEIPASS", None)
     if base:
         return os.path.join(base, relative_path)
-    exe_dir = os.path.dirname(sys.executable)
     # macOS .app bundle: data files in ../Resources/
+    exe_dir = os.path.dirname(sys.executable)
     resources = os.path.join(exe_dir, "..", "Resources", relative_path)
     if os.path.exists(resources):
         return resources
+    # Dev mode: use project directory (not venv bin/)
+    project_path = os.path.join(PROJECT_DIR, relative_path)
+    if os.path.exists(project_path):
+        return project_path
     return os.path.join(exe_dir, relative_path)
 
 

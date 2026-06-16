@@ -261,3 +261,20 @@ class Api:
         if ok and self.window:
             self.window.destroy()
         return {"ok": ok, "path": detail} if ok else {"ok": False, "error": detail}
+
+    def reset_all_data(self):
+        """Delete all user data: records, todos, subjects, settings, slot_state."""
+        from app.storage import get_conn
+        conn = get_conn()
+        try:
+            conn.execute("DELETE FROM records")
+            conn.execute("DELETE FROM todos")
+            conn.execute("DELETE FROM subjects")
+            conn.execute("DELETE FROM settings")
+            conn.execute("DELETE FROM slot_state")
+            conn.commit()
+            return {"ok": True}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+        finally:
+            conn.close()
