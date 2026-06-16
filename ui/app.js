@@ -53,9 +53,25 @@ function whenReady(fn) {
     pyApi = window.pywebview.api;
     fn();
   } else {
+    let attempts = 0;
+    const maxAttempts = 50; // 5 seconds total
+    const checkInterval = setInterval(() => {
+      attempts++;
+      if (window.pywebview && window.pywebview.api) {
+        clearInterval(checkInterval);
+        pyApi = window.pywebview.api;
+        fn();
+      } else if (attempts >= maxAttempts) {
+        clearInterval(checkInterval);
+        console.error('pywebview API not available after ' + maxAttempts + ' attempts');
+        // Fallback: render UI anyway (offline mode)
+        fn();
+      }
+    }, 100);
+    // Also listen for the event as backup
     window.addEventListener('pywebviewready', () => {
+      clearInterval(checkInterval);
       pyApi = window.pywebview.api;
-      fn();
     });
   }
 }
@@ -139,7 +155,8 @@ function bindStaticControls() {
   expandBtn.addEventListener('click', exitCompact);
   closeBtn.addEventListener('click', async () => {
     if (!pyApi) return;
-    if (minimizeToTray) {
+    // minimizeToTray only works on macOS (NSStatusBar)
+    if (minimizeToTray && navigator.platform.toLowerCase().includes('mac')) {
       await callApi(pyApi.hide_window(), 'Hide window');
     } else {
       try {

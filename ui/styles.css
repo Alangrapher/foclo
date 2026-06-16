@@ -168,8 +168,8 @@ body {
 }
 
 /* Page */
-.page-header { margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-end; }
-.header-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.page-header { margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-end; -webkit-app-region: drag; }
+.header-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; -webkit-app-region: no-drag; }
 .page-title { font-size: 20px; font-weight: 700; color: var(--text); }
 .page-sub { font-size: 11px; color: var(--text2); margin-top: 3px; }
 
