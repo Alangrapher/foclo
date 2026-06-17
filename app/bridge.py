@@ -156,6 +156,14 @@ class Api:
         self.engine.set_description(index, description)
         return {"ok": True}
 
+    def set_resume_record(self, index: int, record_id: int):
+        """Mark a slot as resuming from an existing record.
+        When archived, time accumulates onto the original record."""
+        if err := self._validate_slot(index):
+            return err
+        self.engine.set_resume_record(index, record_id)
+        return {"ok": True}
+
     # ── Subjects ───────────────────────────────────────
 
     def get_subjects(self):

@@ -110,8 +110,9 @@ class BackupService:
         filename = f"alangrapher_{ts}.db"
         dest = os.path.join(backup_dir, filename)
 
-        # Use sqlite3 backup API — safe with WAL mode
-        src = sqlite3.connect(str(DB_PATH))
+        # Use get_conn() for WAL mode + busy_timeout, then backup API
+        from app.storage import get_conn
+        src = get_conn()
         dst = sqlite3.connect(dest)
         try:
             src.backup(dst)

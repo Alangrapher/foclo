@@ -635,7 +635,10 @@ function fillRecordToSlot(id) {
   const subj = subjects.find(s => s.name === record.subject_name);
   slot.subject_id = subj ? subj.id : null;
   slot.description = record.description || '';
-  if (window.pywebview && window.pywebview.api) callApi(window.pywebview.api.set_description(slot.index, slot.description), 'Update timer description');
+  if (window.pywebview && window.pywebview.api) {
+    callApi(window.pywebview.api.set_description(slot.index, slot.description), 'Update timer description');
+    callApi(window.pywebview.api.set_resume_record(slot.index, record.id), 'Set resume record');
+  }
   switchPage('timer');
   renderTimer();
 }
