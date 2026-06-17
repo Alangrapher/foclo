@@ -15,6 +15,22 @@ DEFAULT_BACKUP_DIR = os.path.expanduser("~/Documents/Alangrapher/backups")
 DEFAULT_INTERVAL_MIN = 60
 MAX_BACKUPS = 24
 
+_tk_root = None
+
+
+def _get_tk_root():
+    """Return a singleton hidden Tk root, creating it on first call.
+    Reusing one instance avoids GDI handle leaks on Windows from
+    creating/destroying Tk() on every file dialog invocation.
+    """
+    global _tk_root
+    if _tk_root is None:
+        from tkinter import Tk
+        _tk_root = Tk()
+        _tk_root.withdraw()
+        _tk_root.attributes('-topmost', True)
+    return _tk_root
+
 
 class BackupService:
     """Hourly database backup with configurable location and retention."""
@@ -110,54 +126,71 @@ class BackupService:
 
     @staticmethod
     def choose_folder(start_dir: str = "") -> str | None:
-        """Open native macOS folder picker via PyObjC."""
+        """Open native folder picker. macOS: PyObjC NSOpenPanel. Fallback: tkinter."""
         try:
             from Foundation import NSURL
             from AppKit import NSOpenPanel
-        except ImportError:
+            panel = NSOpenPanel.alloc().init()
+            panel.setCanChooseDirectories_(True)
+            panel.setCanChooseFiles_(False)
+            panel.setCanCreateDirectories_(True)
+            panel.setTitle_("Choose Backup Location")
+            panel.setMessage_("Select the folder where backups will be saved.")
+            panel.setPrompt_("Select")
+            if start_dir:
+                url = NSURL.fileURLWithPath_(start_dir)
+                panel.setDirectoryURL_(url)
+            if panel.runModal():
+                return str(panel.URL().path())
             return None
-
-        panel = NSOpenPanel.alloc().init()
-        panel.setCanChooseDirectories_(True)
-        panel.setCanChooseFiles_(False)
-        panel.setCanCreateDirectories_(True)
-        panel.setTitle_("Choose Backup Location")
-        panel.setMessage_("Select the folder where backups will be saved.")
-        panel.setPrompt_("Select")
-
-        if start_dir:
-            url = NSURL.fileURLWithPath_(start_dir)
-            panel.setDirectoryURL_(url)
-
-        if panel.runModal():
-            return str(panel.URL().path())
-        return None
+        except ImportError:
+            pass
+        # Windows / Linux fallback: tkinter directory chooser
+        try:
+            from tkinter import filedialog
+            root = _get_tk_root()
+            folder = filedialog.askdirectory(
+                title="Choose Backup Location",
+                initialdir=start_dir if start_dir and os.path.isdir(start_dir) else os.path.expanduser("~"),
+            )
+            return folder if folder else None
+        except Exception:
+            return None
 
     @staticmethod
     def choose_backup_file(start_dir: str = "") -> str | None:
-        """Open native macOS file picker for .db backup files."""
+        """Open native file picker for .db backup files. macOS: PyObjC. Fallback: tkinter."""
         try:
             from Foundation import NSURL
             from AppKit import NSOpenPanel
-        except ImportError:
+            panel = NSOpenPanel.alloc().init()
+            panel.setCanChooseDirectories_(False)
+            panel.setCanChooseFiles_(True)
+            panel.setAllowedFileTypes_(["db"])
+            panel.setTitle_("Choose Backup to Restore")
+            panel.setMessage_("Select an Alangrapher backup file (.db).")
+            panel.setPrompt_("Select")
+            if start_dir and os.path.isdir(start_dir):
+                panel.setDirectoryURL_(NSURL.fileURLWithPath_(start_dir))
+            elif start_dir:
+                panel.setDirectoryURL_(NSURL.fileURLWithPath_(os.path.dirname(start_dir)))
+            if panel.runModal():
+                return str(panel.URL().path())
             return None
-
-        panel = NSOpenPanel.alloc().init()
-        panel.setCanChooseDirectories_(False)
-        panel.setCanChooseFiles_(True)
-        panel.setAllowedFileTypes_(["db"])
-        panel.setTitle_("Choose Backup to Restore")
-        panel.setMessage_("Select an Alangrapher backup file (.db).")
-        panel.setPrompt_("Select")
-
-        if start_dir and os.path.isdir(start_dir):
-            panel.setDirectoryURL_(NSURL.fileURLWithPath_(start_dir))
-        elif start_dir:
-            panel.setDirectoryURL_(NSURL.fileURLWithPath_(os.path.dirname(start_dir)))
-
-        if panel.runModal():
-            return str(panel.URL().path())
-        return None
+        except ImportError:
+            pass
+        # Windows / Linux fallback: tkinter file chooser
+        try:
+            from tkinter import filedialog
+            root = _get_tk_root()
+            path = filedialog.askopenfilename(
+                title="Choose Backup to Restore",
+                initialdir=start_dir if start_dir and os.path.isdir(start_dir) else os.path.expanduser("~"),
+                filetypes=[("Database files", "*.db"), ("All files", "*.*")],
+            )
+            return path if path else None
+        except Exception:
+            return None
 
     def restore_backup(self, backup_path: str, engine=None) -> tuple[bool, str]:
         """Validate and restore a backup file. Returns (ok, detail)."""

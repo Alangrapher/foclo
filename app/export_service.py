@@ -10,9 +10,6 @@ from datetime import date, datetime, timedelta
 from collections import defaultdict
 import json
 
-from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
-
 
 DAY_ABBR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
@@ -160,6 +157,12 @@ def export_xlsx(
     start_date: date | None = None,
     end_date: date | None = None,
 ) -> str:
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+    except ImportError:
+        return None  # caller handles: raise RuntimeError("openpyxl is not installed")
+
     data = _collect_data(start_date, end_date)
     s, e = data["s"], data["e"]
     ordered_ids = data["ordered_ids"]

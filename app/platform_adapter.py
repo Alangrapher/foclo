@@ -37,3 +37,12 @@ def is_macos() -> bool:
 
 def is_windows() -> bool:
     return sys.platform == "win32"
+
+
+def is_bundled() -> bool:
+    """Return True if running as a macOS .app bundle."""
+    try:
+        from Foundation import NSProcessInfo
+        return "YES" == NSProcessInfo.processInfo().environment().get("ALANGRAPHER_BUNDLED", "NO")
+    except ImportError:
+        return False

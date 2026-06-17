@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from app.storage import get_conn
 
 
-def get_records(filter: str = "today") -> list[dict]:
+def get_records(filter: str = "today", week_start: str = "mon") -> list[dict]:
     conn = get_conn()
     try:
         sql = (
@@ -20,10 +20,17 @@ def get_records(filter: str = "today") -> list[dict]:
             sql += "WHERE date(r.start_time) = ? "
             params.append(today)
         elif filter == "week":
-            today = datetime.now().date()
-            monday = today - timedelta(days=today.weekday())
+            today_dt = datetime.now().date()
+            weekday = today_dt.weekday()  # 0=Mon, 6=Sun
+            if week_start == "sun":
+                # Sunday start: go back to most recent Sunday
+                days_back = (weekday + 1) % 7  # Mon→1, Tue→2, ..., Sun→0
+                week_start_dt = today_dt - timedelta(days=days_back)
+            else:
+                # Monday start
+                week_start_dt = today_dt - timedelta(days=weekday)
             sql += "WHERE date(r.start_time) >= ? "
-            params.append(monday.isoformat())
+            params.append(week_start_dt.isoformat())
         elif filter == "month":
             sql += "WHERE r.start_time >= datetime('now', '-1 month') "
         sql += "ORDER BY r.created_at DESC"

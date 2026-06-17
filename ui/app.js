@@ -260,7 +260,7 @@ async function loadTodos() {
 }
 
 async function loadRecords() {
-  const result = await callApi(window.pywebview.api.get_records(recordsFilter), 'Load records');
+  const result = await callApi(window.pywebview.api.get_records(recordsFilter, weekStart), 'Load records');
   if (Array.isArray(result)) records = result;
 }
 
@@ -376,8 +376,10 @@ function timerCard(slot) {
     </div>
     <div class="timer-clock"${slot.collapsed ? ' style="display:none"' : ''}>${slot.display_time || '00:00:00'}</div>
     <div class="timer-subject-line"${slot.collapsed ? ' style="display:none"' : ''}>${subj ? esc(subj.name) : '—'}${slot.description ? ' — ' + esc(slot.description) : ''}</div>
-    <div class="form-row"${slot.collapsed ? ' style="display:none"' : ''}><div class="form-label">Subject</div><div class="select-wrapper"><select class="form-select" onchange="setSlotSubject(${index}, this.value)"${subjectDisabled ? ' disabled' : ''}>${subjectOptions(slot.subject_id)}</select></div></div>
-    <div class="form-row"${slot.collapsed ? ' style="display:none"' : ''}><div class="form-label">Description (optional)</div><input class="form-input" placeholder="What are you working on?" value="${attr(slot.description || '')}" oninput="setSlotDescription(${index}, this.value)"${subjectDisabled ? ' disabled' : ''}></div>
+    <div class="form-row form-row-split"${slot.collapsed ? ' style="display:none"' : ''}>
+      <div style="flex:1"><div class="form-label">Subject</div><div class="select-wrapper"><select class="form-select" onchange="setSlotSubject(${index}, this.value)"${subjectDisabled ? ' disabled' : ''}>${subjectOptions(slot.subject_id)}</select></div></div>
+      <div style="flex:1"><div class="form-label">Description (optional)</div><input class="form-input" placeholder="What are you working on?" value="${attr(slot.description || '')}" oninput="setSlotDescription(${index}, this.value)"${subjectDisabled ? ' disabled' : ''}></div>
+    </div>
     <div class="btn-row"${slot.collapsed ? ' style="display:none"' : ''}>
       <button class="btn btn-primary${isSwitch ? ' btn-switch' : ''}" style="flex:1;" onclick="primaryTimerAction(${index})"${isPending ? ' disabled' : ''}><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${iconPath}</svg>${isPending ? 'Working...' : actionText}</button>
       <button class="btn btn-secondary" style="flex:1;" onclick="archiveSlot(${index})"${isPending ? ' disabled' : ''}><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 15h18"/><path d="m15 8-3 3-3-3"/></svg>Archive</button>
@@ -599,8 +601,17 @@ function toggleCollapse(el, ev) {
 function renderTodayRecords() {
   const tbody = document.querySelector('#page-timer .records-table tbody');
   if (!tbody) return;
-  const todayRecords = records.filter(r => (r.date || '') === todayIso());
-  tbody.innerHTML = todayRecords.length ? todayRecords.map(r => `<tr ondblclick="fillRecordToSlot(${r.id})" data-id="${r.id}" data-subject="${attr(r.subject_name || '—')}" data-desc="${attr(r.description || '—')}" data-dur="${attr(r.duration || '0m')}"><td class="cell-subj">${esc(r.subject_name || '—')}</td><td class="cell-desc">${esc(r.description || '—')}</td><td class="cell-dur" style="text-align:right">${esc(r.duration || '0m')}</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted)">No records yet</td></tr>';
+  const render = (todayRecords) => {
+    tbody.innerHTML = todayRecords.length ? todayRecords.map(r => `<tr ondblclick="fillRecordToSlot(${r.id})" data-id="${r.id}" data-subject="${attr(r.subject_name || '—')}" data-desc="${attr(r.description || '—')}" data-dur="${attr(r.duration || '0m')}"><td class="cell-subj">${esc(r.subject_name || '—')}</td><td class="cell-desc">${esc(r.description || '—')}</td><td class="cell-dur" style="text-align:right">${esc(r.duration || '0m')}</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted)">No records yet</td></tr>';
+  };
+  if (window.pywebview && window.pywebview.api) {
+    callApi(window.pywebview.api.get_records('today'), 'Load today records').then(result => {
+      render(Array.isArray(result) ? result : []);
+    });
+  } else {
+    const todayRecords = records.filter(r => (r.date || '') === todayIso());
+    render(todayRecords);
+  }
 }
 
 function fillRecordToSlot(id) {
@@ -850,7 +861,7 @@ async function addRecord() {
   } else records.unshift({id: Date.now(), subject_id: subj?.id, subject_name: subjName, description: desc, duration: dur, date});
   row.querySelector('.records-add-desc').value = '';
   row.querySelector('.records-add-duration').value = '';
-  renderRecords(); renderTodayRecords();
+  renderRecords(); renderTodayRecords(); updateTiles();
 }
 
 function renderRecords() {
@@ -895,13 +906,13 @@ async function saveEdit(span) {
       return;
     }
     await loadRecords();
-    renderRecords(); renderTodayRecords();
+    renderRecords(); renderTodayRecords(); updateTiles();
     return;
   }
   Object.assign(tr.dataset, {date, subject: selectedSubject ? selectedSubject.name : subjectSelect.options[subjectSelect.selectedIndex]?.text || '—', desc, dur});
   const r = records.find(x => Number(x.id) === Number(tr.dataset.id));
   if (r) Object.assign(r, {date: tr.dataset.date, subject_id: subjectId, subject_name: tr.dataset.subject, description: tr.dataset.desc, duration: tr.dataset.dur});
-  renderRecords(); renderTodayRecords();
+  renderRecords(); renderTodayRecords(); updateTiles();
 }
 
 function cancelEdit() { renderRecords(); renderTodayRecords(); }
@@ -914,7 +925,7 @@ async function delRecord(span) {
     await loadRecords();
   }
   else records = records.filter(r => Number(r.id) !== id);
-  renderRecords(); renderTodayRecords();
+  renderRecords(); renderTodayRecords(); updateTiles();
 }
 
 async function addSubject() {
@@ -1022,6 +1033,11 @@ function renderSettings() {
   if (mtToggle) mtToggle.checked = minimizeToTray;
   const defaultSlotsSelect = document.getElementById('defaultSlotsSelect');
   if (defaultSlotsSelect) defaultSlotsSelect.value = defaultSlots;
+
+  // minimize-to-tray only works on macOS — hide row on other platforms
+  const isMac = navigator.platform.toLowerCase().includes('mac');
+  const mtRow = document.getElementById('minimizeTrayRow');
+  if (mtRow) mtRow.style.display = isMac ? '' : 'none';
 
   // ── Backup ──────────────────────────────────────────
 
@@ -1264,7 +1280,10 @@ async function quitArchive() {
 }
 
 function resetAllData() {
-  if (!pyApi) return;
+  if (!pyApi) {
+    alert('API not ready — please wait for the app to finish loading.');
+    return;
+  }
   const modal = document.getElementById('resetConfirmModal');
   showModal(modal);
 }

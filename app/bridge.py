@@ -170,13 +170,15 @@ class Api:
 
     # ── Records ────────────────────────────────────────
 
-    def get_records(self, filter: str = "today"):
-        return get_records(filter)
+    def get_records(self, filter: str = "today", week_start: str = "mon"):
+        return get_records(filter, week_start)
 
     def add_record(self, subject_id: int, description: str, start_time: str, end_time: str):
         return add_record(subject_id, description, start_time, end_time)
 
-    def update_record(self, record_id: int, **kwargs):
+    def update_record(self, record_id: int, data: dict = None, **kwargs):
+        if data is not None:
+            kwargs = data
         return update_record(record_id, **kwargs)
 
     def delete_record(self, record_id: int):
@@ -228,6 +230,8 @@ class Api:
                 result = export_json(path, start_date=sd, end_date=ed)
             else:
                 result = export_xlsx(path, start_date=sd, end_date=ed)
+                if result is None:
+                    return {"ok": False, "error": "openpyxl is not installed — install with: pip install openpyxl"}
             return {"ok": True, "path": result}
         except ValueError as e:
             return {"ok": False, "error": str(e)}
