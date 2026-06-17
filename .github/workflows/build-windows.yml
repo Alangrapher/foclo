@@ -8,6 +8,8 @@ on:
       - 'AppIcon.icns'           # icon changes
       - 'README.md'              # docs
       - '.gitignore'
+    tags:
+      - 'win-v*'                 # trigger release on win version tags
   workflow_dispatch:
 
 jobs:
@@ -49,14 +51,36 @@ jobs:
             --hidden-import webview.platforms.winforms `
             main.py
 
-      - name: Upload release
+      - name: Upload release artifact
         uses: actions/upload-artifact@v4
+        if: github.ref_type != 'tag'
         with:
           name: Alangrapher-Windows
           path: dist/Alangrapher.exe
 
-      - name: Upload debug
+      - name: Upload debug artifact
         uses: actions/upload-artifact@v4
+        if: github.ref_type != 'tag'
         with:
           name: Alangrapher-Windows-DEBUG
           path: dist/Alangrapher-debug.exe
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/win-v')
+        with:
+          name: "Windows ${{ github.ref_name }}"
+          body: |
+            ## Windows ${{ github.ref_name }}
+
+            **Download:** `Alangrapher.exe` below — double-click to run. Windows SmartScreen may warn on first launch; click "More info" → "Run anyway".
+
+            For console output (debugging): download `Alangrapher-debug.exe`.
+
+            ### Changes
+            See [full changelog](https://github.com/Alangrapher/foclo/commits/main).
+          files: |
+            dist/Alangrapher.exe
+            dist/Alangrapher-debug.exe
+          draft: false
+          prerelease: false
