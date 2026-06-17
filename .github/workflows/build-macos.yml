@@ -1,0 +1,82 @@
+name: Build macOS
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'README.md'
+      - '.gitignore'
+    tags:
+      - 'v*'                       # trigger release on version tags (v0.28, etc.)
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pywebview pyinstaller openpyxl pyobjc-framework-Cocoa pyobjc-framework-Quartz
+
+      - name: Build .app bundle
+        run: |
+          pyinstaller --clean --noconfirm Alangrapher.spec
+          echo "Built: dist/Alangrapher.app"
+
+      - name: Create DMG
+        run: |
+          mkdir -p dmg_staging
+          cp -R dist/Alangrapher.app dmg_staging/
+          # Standard macOS DMG pattern: app + symlink to /Applications
+          ln -s /Applications dmg_staging/Applications
+          hdiutil create \
+            -volname "Alangrapher" \
+            -srcfolder dmg_staging \
+            -ov \
+            -format UDZO \
+            Alangrapher.dmg
+          echo "Created: Alangrapher.dmg ($(du -sh Alangrapher.dmg | cut -f1))"
+
+      - name: Upload artifact (branch push)
+        uses: actions/upload-artifact@v4
+        if: github.ref_type != 'tag'
+        with:
+          name: Alangrapher-macOS
+          path: Alangrapher.dmg
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: "macOS ${{ github.ref_name }}"
+          body: |
+            ## macOS ${{ github.ref_name }}
+
+            **Download:** `Alangrapher.dmg` below — open and drag **Alangrapher** to the **Applications** folder.
+
+            ### First Launch
+            Since the app is not Apple-notarized, macOS Gatekeeper will block it. To open:
+            1. **Right-click** on Alangrapher.app → **Open**
+            2. Click **Open** in the dialog
+            3. (Or via Terminal: `xattr -cr /Applications/Alangrapher.app`)
+
+            ### Requirements
+            - macOS 13 (Ventura) or later
+
+            ### Changes
+            See [full changelog](https://github.com/Alangrapher/foclo/commits/main).
+          files: |
+            Alangrapher.dmg
+          draft: false
+          prerelease: false
