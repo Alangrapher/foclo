@@ -1,6 +1,8 @@
 """Bridge — pywebview JS bridge API. Composes all service modules."""
 from __future__ import annotations
 
+import os
+
 from timer_engine import TimerEngine
 from app.storage import get_setting
 from app.subject_service import get_subjects, add_subject, update_subject, delete_subject
@@ -208,7 +210,7 @@ class Api:
 
     # ── Export ──────────────────────────────────────────
 
-    def export_timesheet(self, start: str = "", end: str = "", format: str = "xlsx"):
+    def export_timesheet(self, start: str = "", end: str = "", format: str = "xlsx", folder: str = ""):
         try:
             from datetime import date
             from app.export_service import export_xlsx, export_markdown, export_json
@@ -221,8 +223,12 @@ class Api:
 
             ext_map = {"xlsx": ".xlsx", "md": ".md", "json": ".json"}
             ext = ext_map.get(format, ".xlsx")
-            import tempfile
-            path = f"{tempfile.gettempdir()}/alangrapher_export_{s_str}_{e_str}{ext}"
+
+            if folder and os.path.isdir(folder):
+                path = os.path.join(folder, f"alangrapher_export_{s_str}_{e_str}{ext}")
+            else:
+                import tempfile
+                path = f"{tempfile.gettempdir()}/alangrapher_export_{s_str}_{e_str}{ext}"
 
             if format == "md":
                 result = export_markdown(path, start_date=sd, end_date=ed)
@@ -235,6 +241,12 @@ class Api:
             return {"ok": True, "path": result}
         except ValueError as e:
             return {"ok": False, "error": str(e)}
+
+    def choose_export_folder(self, start_dir: str = ""):
+        """Open native folder picker for export destination. macOS: PyObjC. Fallback: tkinter."""
+        from app.backup_service import BackupService
+        path = BackupService.choose_folder(start_dir or os.path.expanduser("~/Desktop"))
+        return {"ok": True, "path": path} if path else {"ok": False, "path": None}
 
     # ── Backup ──────────────────────────────────────────
 

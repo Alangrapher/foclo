@@ -46,6 +46,7 @@ let clickTimer = null;
 let lastExport = 'No exports yet';
 let isRefreshing = false;
 let isExporting = false;
+let exportFolder = '';
 let clockIntervalId = null;
 
 function whenReady(fn) {
@@ -186,6 +187,19 @@ function bindStaticControls() {
     document.querySelectorAll('#page-export .btn-secondary').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   }));
+  // Browse button for export folder
+  const exportBrowseBtn = document.getElementById('export-browse-btn');
+  const exportPathEl = document.getElementById('export-path');
+  if (exportBrowseBtn) exportBrowseBtn.addEventListener('click', async () => {
+    if (!window.pywebview || !window.pywebview.api || typeof window.pywebview.api.choose_export_folder !== 'function') return;
+    try {
+      const result = await callApi(window.pywebview.api.choose_export_folder(exportFolder), 'Choose export folder');
+      if (result && result.ok && result.path) {
+        exportFolder = result.path;
+        if (exportPathEl) exportPathEl.textContent = exportFolder;
+      }
+    } catch (e) { /* user cancelled */ }
+  });
   const exportButton = document.querySelector('#page-export .btn-primary');
   if (exportButton) exportButton.addEventListener('click', async () => {
     if (isExporting) return;
@@ -201,7 +215,7 @@ function bindStaticControls() {
     try {
       isExporting = true;
       exportButton.disabled = true;
-      const result = await callApi(window.pywebview.api.export_timesheet(start, end, format), 'Export timesheet');
+      const result = await callApi(window.pywebview.api.export_timesheet(start, end, format, exportFolder), 'Export timesheet');
       lastExport = new Date().toLocaleString([], {hour: '2-digit', minute: '2-digit', year: 'numeric', month: 'short', day: 'numeric'});
       if (result && result.ok) {
         document.querySelector('#page-export .page-sub').textContent = 'Last export: ' + lastExport + ' → ' + result.path;
