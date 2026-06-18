@@ -349,7 +349,7 @@ function subjectOptions(selectedId) {
   return '<option value="">— Select subject —</option>' + subjects.map(s => `<option value="${s.id}"${Number(s.id) === Number(selectedId) ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
 }
 
-function renderTimer() {
+async function renderTimer() {
   const page = document.getElementById('page-timer');
   const tileRow = page.querySelector('.tile-row');
   let node = page.querySelector('.page-header').nextElementSibling;
@@ -360,7 +360,7 @@ function renderTimer() {
   }
   slots.forEach(slot => page.insertBefore(timerCard(slot), tileRow));
   renderTodayRecords();
-  updateTiles();
+  await updateTiles();
 }
 
 function timerCard(slot) {
@@ -483,7 +483,6 @@ async function pauseSlot(index) {
 async function archiveSlot(index) {
   if (!slots[index] || slots[index].pendingAction) return;
   slots[index].pendingAction = true;
-  renderTimer(); renderCompact();
   const card = document.querySelector(`.timer-slot-card[data-slot="${index}"]`);
   const sid = card ? Number(card.querySelector('.form-select').value) || null : slots[index].subject_id;
   const desc = card ? card.querySelector('.form-input').value : slots[index].description;
@@ -616,7 +615,7 @@ function renderTodayRecords() {
   const tbody = document.querySelector('#page-timer .records-table tbody');
   if (!tbody) return;
   const render = (todayRecords) => {
-    tbody.innerHTML = todayRecords.length ? todayRecords.map(r => `<tr ondblclick="fillRecordToSlot(${r.id})" data-id="${r.id}" data-subject="${attr(r.subject_name || '—')}" data-desc="${attr(r.description || '—')}" data-dur="${attr(r.duration || '0m')}"><td class="cell-subj">${esc(r.subject_name || '—')}</td><td class="cell-desc">${esc(r.description || '—')}</td><td class="cell-dur" style="text-align:right">${esc(r.duration || '0m')}</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted)">No records yet</td></tr>';
+    tbody.innerHTML = todayRecords.length ? todayRecords.map(r => `<tr ondblclick="fillRecordToSlot(${r.id})" title="Double-click to load into timer" data-id="${r.id}" data-subject="${attr(r.subject_name || '—')}" data-desc="${attr(r.description || '—')}" data-dur="${attr(r.duration || '0m')}"><td class="cell-subj">${esc(r.subject_name || '—')}</td><td class="cell-desc">${esc(r.description || '—')}</td><td class="cell-dur" style="text-align:right">${esc(r.duration || '0m')}</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted)">No records yet</td></tr>';
   };
   if (window.pywebview && window.pywebview.api) {
     callApi(window.pywebview.api.get_records('today'), 'Load today records').then(result => {
@@ -631,6 +630,8 @@ function renderTodayRecords() {
 function fillRecordToSlot(id) {
   const record = records.find(r => Number(r.id) === Number(id));
   if (!record) return;
+  // Only today's records can be loaded into timer
+  if (record.date !== todayIso()) return;
   const slot = slots.find(s => s.status === 'idle') || slots[0];
   const subj = subjects.find(s => s.name === record.subject_name);
   slot.subject_id = subj ? subj.id : null;
@@ -883,7 +884,7 @@ async function addRecord() {
 
 function renderRecords() {
   const tbody = document.getElementById('recordsBody');
-  tbody.innerHTML = records.length ? records.map(r => `<tr data-id="${r.id}" data-date="${attr(r.date || todayIso())}" data-subject="${attr(r.subject_name || '—')}" data-desc="${attr(r.description || '—')}" data-dur="${attr(r.duration || '0m')}" ondblclick="fillRecordToSlot(${r.id})"><td class="cell-date records-date-col">${esc(r.date || todayIso())}</td><td class="cell-subj">${esc(r.subject_name || '—')}</td><td class="cell-desc">${esc(r.description || '—')}</td><td class="cell-dur" style="text-align:right">${esc(r.duration || '0m')}</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>`).join('') : '<tr><td colspan="5" class="empty-state table-empty">No records yet</td></tr>';
+  tbody.innerHTML = records.length ? records.map(r => `<tr data-id="${r.id}" data-date="${attr(r.date || todayIso())}" data-subject="${attr(r.subject_name || '—')}" data-desc="${attr(r.description || '—')}" data-dur="${attr(r.duration || '0m')}"${r.date === todayIso() ? ` ondblclick="fillRecordToSlot(${r.id})" title="Double-click to load into timer"` : ''}><td class="cell-date records-date-col">${esc(r.date || todayIso())}</td><td class="cell-subj">${esc(r.subject_name || '—')}</td><td class="cell-desc">${esc(r.description || '—')}</td><td class="cell-dur" style="text-align:right">${esc(r.duration || '0m')}</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>`).join('') : '<tr><td colspan="5" class="empty-state table-empty">No records yet</td></tr>';
   document.getElementById('recordsCount').textContent = records.length;
 }
 

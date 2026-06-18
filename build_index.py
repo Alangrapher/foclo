@@ -291,7 +291,7 @@ function renderRecords(records) {{
     if (!tbody) return;
     tbody.innerHTML = records.map(r => `
         <tr data-id="${{r.id}}" data-subject="${{escapeAttr(r.subject_name)}}" data-desc="${{escapeAttr(r.description)}}"
-            data-start="${{r.start}}" data-end="${{r.end}}" data-dur="${{r.duration}}" data-date="${{r.date}}">
+            data-start="${{r.start}}" data-end="${{r.end}}" data-dur="${{r.duration}}" data-date="${{r.date}}"${{r.date === todayIso() ? ' ondblclick="fillRecordToSlot(' + r.id + ')" title="Double-click to load into timer"' : ''}}>
             <td class="records-date-col cell-date">${{r.date}}</td>
             <td class="cell-subj">${{escapeHTML(r.subject_name)}}</td>
             <td class="cell-desc">${{escapeHTML(r.description) || '—'}}</td>
@@ -493,6 +493,26 @@ const trigger = document.getElementById('easterEggTrigger');
 trigger.addEventListener('click', () => modal.classList.add('show'));
 modal.addEventListener('click', (e) => {{ if (e.target === modal) modal.classList.remove('show'); }});
 document.addEventListener('keydown', (e) => {{ if (e.key === 'Escape' && modal.classList.contains('show')) modal.classList.remove('show'); }});
+
+// ═══ Double-click record → timer ════════════════════════
+function todayIso() {{
+    return new Date().toISOString().slice(0, 10);
+}}
+
+async function fillRecordToSlot(id) {{
+    if (!api) return;
+    // Only today's records can be loaded into timer
+    const todayRecs = await api.get_records('today');
+    const record = todayRecs.find(r => Number(r.id) === Number(id));
+    if (!record) return;
+    const idleIdx = _slots.findIndex(s => s.status === 'idle');
+    if (idleIdx < 0) return;
+    const subj = _subjects.find(s => s.name === record.subject_name);
+    await api.set_resume_record(idleIdx, record.id);
+    if (subj) await api.set_description(idleIdx, record.description || '');
+    switchPage('timer');
+    refreshAll();
+}}
 
 // ═══ Helpers ════════════════════════════════════════════
 function escapeHTML(s) {{
