@@ -60,8 +60,7 @@ class WindowsTray:
         menu = pystray.Menu(
             pystray.MenuItem("Show Window", self._show_window, default=True),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("Archive && Quit", self._archive_and_quit),
-            pystray.MenuItem("Pause && Quit", self._pause_and_quit),
+            pystray.MenuItem("Quit Alangrapher", self._quit_app),
         )
 
         self._icon = pystray.Icon(
@@ -77,38 +76,58 @@ class WindowsTray:
         if self.window:
             self.window.show()
 
-    def _archive_and_quit(self, _icon=None, _item=None):
-        self._do_quit(archive_first=True)
+    def _quit_app(self, _icon=None, _item=None):
+        """Show quit dialog in a fresh thread to avoid pystray event-loop deadlock."""
+        import threading
+        threading.Thread(target=self._quit_dialog_thread, daemon=True).start()
 
-    def _pause_and_quit(self, _icon=None, _item=None):
-        self._do_quit(archive_first=False)
+    def _quit_dialog_thread(self):
+        """Runs in a clean thread — no pystray message pump interference."""
+        import ctypes
+        import os
 
-    def _do_quit(self, archive_first):
+        MB_YESNOCANCEL = 0x00000003
+        MB_ICONWARNING = 0x00000030
+        IDYES = 6
+        IDNO = 7
+
+        result = ctypes.windll.user32.MessageBoxW(
+            0,
+            "Timers are active. What would you like to do?\n\n"
+            "是(Y) = Archive all & quit\n"
+            "否(N) = Pause all & quit\n"
+            "取消   = Cancel",
+            "Quit Alangrapher",
+            MB_YESNOCANCEL | MB_ICONWARNING,
+        )
+
+        if result == IDYES:
+            self._exit_after(archive_first=True)
+        elif result == IDNO:
+            self._exit_after(archive_first=False)
+        # Cancel → do nothing
+
+    def _exit_after(self, archive_first):
         """Archive or pause all active slots, then exit."""
         import os
-        import threading
-
-        def _exit_after():
-            try:
-                from app.storage import get_setting
-                from timer_engine import TimerEngine
-                n = int(get_setting("default_slots", "1"))
-                eng = TimerEngine(num_slots=n)
-                for i, s in enumerate(eng.slots):
-                    try:
-                        if archive_first:
-                            if s.status in ("running", "paused"):
-                                eng.archive(i)
-                        else:
-                            if s.status == "running":
-                                eng.pause(i)
-                    except Exception:
-                        pass
-            except Exception:
-                pass
-            os._exit(0)
-
-        threading.Thread(target=_exit_after, daemon=True).start()
+        try:
+            from app.storage import get_setting
+            from timer_engine import TimerEngine
+            n = int(get_setting("default_slots", "1"))
+            eng = TimerEngine(num_slots=n)
+            for i, s in enumerate(eng.slots):
+                try:
+                    if archive_first:
+                        if s.status in ("running", "paused"):
+                            eng.archive(i)
+                    else:
+                        if s.status == "running":
+                            eng.pause(i)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        os._exit(0)
 
     def refresh_icon(self):
         """Update icon to reflect current timer state."""
