@@ -239,8 +239,16 @@ body {
   cursor: pointer; border-radius: 6px; color: var(--muted);
   transition: all 0.12s;
 }
-.todo-item:hover .todo-start-btn { visibility: visible; }
+.todo-del-btn {
+  width: 28px; height: 28px; flex-shrink: 0; visibility: hidden;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border-radius: 6px; color: var(--muted);
+  transition: all 0.12s; margin-right: 2px;
+}
+.todo-item:hover .todo-start-btn,
+.todo-item:hover .todo-del-btn { visibility: visible; }
 .todo-start-btn:hover { background: var(--accent); color: #fff; }
+.todo-del-btn:hover { background: #cc2200; color: #fff; }
 .todo-item.done .todo-start-btn { visibility: hidden !important; }
 
 /* Filter chips */

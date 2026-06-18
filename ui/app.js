@@ -835,6 +835,17 @@ async function toggleTodo(arg) {
   renderTodos();
 }
 
+async function delTodo(arg) {
+  const id = typeof arg === 'number' ? arg : Number(arg.closest('.todo-item').dataset.id);
+  if (window.pywebview && window.pywebview.api) {
+    const result = await callApi(window.pywebview.api.delete_todo(id), 'Delete todo');
+    if (!result || result.ok === false) return;
+    await loadTodos();
+  }
+  else todos = todos.filter(t => Number(t.id) !== id);
+  renderTodos();
+}
+
 async function startTodoTimer(arg) {
   const id = typeof arg === 'number' ? arg : Number(arg.closest('.todo-item').dataset.id);
   const todo = todos.find(t => Number(t.id) === Number(id));
@@ -851,7 +862,7 @@ async function startTodoTimer(arg) {
 
 function renderTodos() {
   const list = document.querySelector('#page-todo .todo-list');
-  list.innerHTML = todos.length ? todos.map(t => `<div class="todo-item${t.status === 'done' ? ' done' : ''}" data-id="${t.id}"><div class="todo-checkbox" onclick="toggleTodo(${t.id})"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><g class="todo-checkmark"><path d="M17 9 11 15 7 11"/></g></svg></div><div class="todo-item-info"><div class="todo-item-subject">${esc(t.subject)}</div>${t.description ? `<div class="todo-item-desc">${esc(t.description)}</div>` : ''}</div><span class="todo-start-btn" onclick="startTodoTimer(${t.id})" title="Start timer"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></span></div>`).join('') : '<div class="empty-state">No todos</div>';
+  list.innerHTML = todos.length ? todos.map(t => `<div class="todo-item${t.status === 'done' ? ' done' : ''}" data-id="${t.id}"><div class="todo-checkbox" onclick="toggleTodo(${t.id})"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><g class="todo-checkmark"><path d="M17 9 11 15 7 11"/></g></svg></div><div class="todo-item-info"><div class="todo-item-subject">${esc(t.subject)}</div>${t.description ? `<div class="todo-item-desc">${esc(t.description)}</div>` : ''}</div><span class="todo-del-btn" onclick="delTodo(${t.id})" title="Delete"><svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span><span class="todo-start-btn" onclick="startTodoTimer(${t.id})" title="Start timer"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></span></div>`).join('') : '<div class="empty-state">No todos</div>';
   updateTodoCounter();
 }
 
