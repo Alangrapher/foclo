@@ -5,15 +5,12 @@ State-dependent icon:
   Idle:                   grey dot
 
 Uses pystray + PIL. Run in a background thread.
-Quit confirmation uses tkinter.messagebox (bundled with Python on Windows).
+Quit confirmation uses ctypes MessageBoxW (native Windows API).
 """
 
 from __future__ import annotations
 
-import sys
 import threading
-import time
-from io import BytesIO
 
 try:
     import pystray
@@ -31,33 +28,6 @@ def _make_icon_image(active: bool) -> Image.Image:
     color = (0, 180, 80, 255) if active else (140, 140, 140, 255)
     draw.ellipse([8, 8, size - 8, size - 8], fill=color)
     return img
-
-
-def _show_quit_dialog(on_archive, on_pause, on_cancel):
-    """Blocking native quit confirmation dialog (tkinter)."""
-    try:
-        import tkinter as tk
-        from tkinter import messagebox
-    except ImportError:
-        # No tkinter? Just quit.
-        on_archive()
-        return
-
-    root = tk.Tk()
-    root.withdraw()
-    root.attributes("-topmost", True)
-
-    answer = messagebox.askyesnocancel(
-        "Quit Alangrapher",
-        "Timers are active.\n\nYes = Archive all & quit\nNo = Pause all & quit\nCancel = stay",
-    )
-    root.destroy()
-
-    if answer is True:        # Yes
-        on_archive()
-    elif answer is False:      # No
-        on_pause()
-    # else: None → Cancel → do nothing
 
 
 class WindowsTray:
@@ -109,7 +79,8 @@ class WindowsTray:
     def _quit_app(self, _icon=None, _item=None):
         """Show quit confirmation or exit directly."""
         if not self.window:
-            self._stop_tray()
+            import os
+            os._exit(0)
             return
 
         # Check if any slots are active
@@ -119,77 +90,74 @@ class WindowsTray:
         except Exception:
             pass
 
-        # Also check for paused/elapsed time
-        from app.storage import get_setting
-        from timer_engine import TimerEngine
+        has_elapsed = False
         try:
+            from app.storage import get_setting
+            from timer_engine import TimerEngine
             default_slots = int(get_setting("default_slots", "1"))
             engine = TimerEngine(num_slots=default_slots)
             has_elapsed = any(s.elapsed_s > 0 or s.status == "running" for s in engine.slots)
         except Exception:
-            has_elapsed = False
+            pass
 
         if active or has_elapsed:
-
-            def _archive():
-                self._stop_tray()
-                from app.storage import update_setting
-
-                def _do():
-                    try:
-                        from app.storage import get_setting as gs
-                        from timer_engine import TimerEngine as TE
-                        n = int(gs("default_slots", "1"))
-                        eng = TE(num_slots=n)
-                        for i, s in enumerate(eng.slots):
-                            if s.status in ("running", "paused"):
-                                try:
-                                    eng.archive(i)
-                                except Exception:
-                                    pass
-                    except Exception:
-                        pass
-                    import os
-                    os._exit(0)
-
-                threading.Thread(target=_do, daemon=True).start()
-
-            def _pause():
-                self._stop_tray()
-
-                def _do():
-                    try:
-                        from app.storage import get_setting as gs
-                        from timer_engine import TimerEngine as TE
-                        n = int(gs("default_slots", "1"))
-                        eng = TE(num_slots=n)
-                        for i, s in enumerate(eng.slots):
-                            if s.status == "running":
-                                try:
-                                    eng.pause(i)
-                                except Exception:
-                                    pass
-                    except Exception:
-                        pass
-                    import os
-                    os._exit(0)
-
-                threading.Thread(target=_do, daemon=True).start()
-
-            _show_quit_dialog(_archive, _pause, lambda: None)
+            self._show_quit_dialog()
         else:
-            self._stop_tray()
             import os
             os._exit(0)
 
-    def _stop_tray(self):
-        """Signal the tray thread to stop."""
-        self._running = False
-        if self._icon:
+    def _show_quit_dialog(self):
+        """Native Windows message box — works from any thread."""
+        import ctypes
+        import os
+        import threading
+
+        MB_YESNOCANCEL = 0x00000003
+        MB_ICONWARNING = 0x00000030
+        IDYES = 6
+        IDNO = 7
+        IDCANCEL = 2
+
+        result = ctypes.windll.user32.MessageBoxW(
+            0,
+            "Timers are active. What would you like to do?\n\n"
+            "是(Y) = Archive all & quit\n"
+            "否(N) = Pause all & quit\n"
+            "取消   = Cancel",
+            "Quit Alangrapher",
+            MB_YESNOCANCEL | MB_ICONWARNING,
+        )
+
+        if result == IDCANCEL:
+            return
+
+        def _do_exit(archive_first):
             try:
-                self._icon.stop()
+                from app.storage import get_setting
+                from timer_engine import TimerEngine
+                n = int(get_setting("default_slots", "1"))
+                eng = TimerEngine(num_slots=n)
+                for i, s in enumerate(eng.slots):
+                    try:
+                        if archive_first:
+                            if s.status in ("running", "paused"):
+                                eng.archive(i)
+                        else:
+                            if s.status == "running":
+                                eng.pause(i)
+                    except Exception:
+                        pass
             except Exception:
                 pass
+            # Do NOT call self._icon.stop() from here — we are in the
+            # event-loop thread or a callback spawned from it. Let the
+            # process exit clean up the tray.
+            os._exit(0)
+
+        if result == IDYES:
+            threading.Thread(target=_do_exit, args=(True,), daemon=True).start()
+        elif result == IDNO:
+            threading.Thread(target=_do_exit, args=(False,), daemon=True).start()
 
     def refresh_icon(self):
         """Update icon to reflect current timer state."""
