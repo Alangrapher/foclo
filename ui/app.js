@@ -72,7 +72,10 @@ function whenReady(fn) {
     // Also listen for the event as backup
     window.addEventListener('pywebviewready', () => {
       clearInterval(checkInterval);
-      pyApi = window.pywebview.api;
+      if (!pyApi) {
+        pyApi = window.pywebview.api;
+        fn();
+      }
     });
   }
 }
@@ -432,7 +435,7 @@ async function _doStartSlot(index, values) {
   const card = document.querySelector(`.timer-slot-card[data-slot="${index}"]`);
   if (card) {
     const btn = card.querySelector('.btn-primary');
-    if (btn) { btn.disabled = true; btn.innerHTML = btn.innerHTML.replace(/>[^<]+</, '>Working...<'); }
+    if (btn) { btn.disabled = true; btn.childNodes.forEach(c => { if (c.nodeType === 3) c.textContent = 'Working...'; }); }
   }
   const sid = values && Object.prototype.hasOwnProperty.call(values, 'subject_id')
     ? values.subject_id
@@ -465,7 +468,7 @@ async function pauseSlot(index) {
   const card = document.querySelector(`.timer-slot-card[data-slot="${index}"]`);
   if (card) {
     const btn = card.querySelector('.btn-primary');
-    if (btn) { btn.disabled = true; btn.innerHTML = btn.innerHTML.replace(/>[^<]+</, '>Working...<'); }
+    if (btn) { btn.disabled = true; btn.childNodes.forEach(c => { if (c.nodeType === 3) c.textContent = 'Working...'; }); }
   }
   try {
     if (window.pywebview && window.pywebview.api) {
@@ -634,7 +637,10 @@ function fillRecordToSlot(id) {
   if (record.date !== todayIso()) return;
   const slot = slots.find(s => s.status === 'idle') || slots[0];
   const subj = subjects.find(s => s.name === record.subject_name);
-  slot.subject_id = subj ? subj.id : null;
+  // Also try matching by subject_id for records loaded from API
+  const subjById = !subj ? subjects.find(s => Number(s.id) === Number(record.subject_id)) : null;
+  const bestSubj = subj || subjById;
+  slot.subject_id = bestSubj ? bestSubj.id : null;
   slot.description = record.description || '';
   if (window.pywebview && window.pywebview.api) {
     callApi(window.pywebview.api.set_description(slot.index, slot.description), 'Update timer description');
@@ -686,16 +692,18 @@ function renderCompact() {
   panel.querySelector('.compact-subject').textContent = subjText + desc;
   panel.querySelector('.compact-subject').style.display = '';
   const arrows = panel.querySelectorAll('.arrow');
-  arrows[0].style.visibility = slots.length > 1 ? 'visible' : 'hidden';
-  arrows[1].style.visibility = slots.length > 1 ? 'visible' : 'hidden';
-  arrows[0].onclick = () => {
-    compactIndex = (compactIndex - 1 + slots.length) % slots.length;
-    renderCompact();
-  };
-  arrows[1].onclick = () => {
-    compactIndex = (compactIndex + 1) % slots.length;
-    renderCompact();
-  };
+  if (arrows.length >= 2) {
+    arrows[0].style.visibility = slots.length > 1 ? 'visible' : 'hidden';
+    arrows[1].style.visibility = slots.length > 1 ? 'visible' : 'hidden';
+    arrows[0].onclick = () => {
+      compactIndex = (compactIndex - 1 + slots.length) % slots.length;
+      renderCompact();
+    };
+    arrows[1].onclick = () => {
+      compactIndex = (compactIndex + 1) % slots.length;
+      renderCompact();
+    };
+  }
   const hasRunningOther = slots.some(s => s.index !== slot.index && s.status === 'running');
   const isSwitch = status !== 'running' && hasRunningOther;
   const action = status === 'running' ? 'Pause' : status === 'paused' ? (isSwitch ? 'Switch' : 'Resume') : (isSwitch ? 'Switch' : 'Start');
@@ -921,6 +929,7 @@ async function saveEdit(span) {
       end_time: end
     }), 'Update record');
     if (!result.ok) {
+      renderRecords(); renderTodayRecords();
       return;
     }
     await loadRecords();

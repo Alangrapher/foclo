@@ -106,18 +106,20 @@ class BackupService:
         backup_dir = get_setting("backup_location", "") or DEFAULT_BACKUP_DIR
         os.makedirs(backup_dir, exist_ok=True)
 
-        ts = datetime.now().strftime("%Y-%m-%d_%H%M")
+        ts = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         filename = f"alangrapher_{ts}.db"
         dest = os.path.join(backup_dir, filename)
 
         # Use get_conn() for WAL mode + busy_timeout, then backup API
         from app.storage import get_conn
         src = get_conn()
-        dst = sqlite3.connect(dest)
         try:
-            src.backup(dst)
+            dst = sqlite3.connect(dest)
+            try:
+                src.backup(dst)
+            finally:
+                dst.close()
         finally:
-            dst.close()
             src.close()
 
         self._prune(backup_dir)
@@ -201,14 +203,16 @@ class BackupService:
         # Validate it looks like an Alangrapher DB
         try:
             conn = sqlite3.connect(backup_path)
-            tables = {r[0] for r in conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'"
-            ).fetchall()}
-            conn.close()
-            required = {"subjects", "records", "todos", "settings", "slot_state"}
-            missing = required - tables
-            if missing:
-                return False, f"Not a valid Alangrapher backup: missing tables {missing}"
+            try:
+                tables = {r[0] for r in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()}
+                required = {"subjects", "records", "todos", "settings", "slot_state"}
+                missing = required - tables
+                if missing:
+                    return False, f"Not a valid Alangrapher backup: missing tables {missing}"
+            finally:
+                conn.close()
         except sqlite3.Error as e:
             return False, f"Invalid database file: {e}"
 
@@ -217,7 +221,7 @@ class BackupService:
         if engine is not None:
             for slot in engine.slots:
                 if slot.status in ("running", "paused"):
-                    engine.pause(slot.slot_index)
+                    engine.pause(slot.index)
 
         # Checkpoint WAL and close any live connections before overwriting
         live_conn = sqlite3.connect(str(DB_PATH))

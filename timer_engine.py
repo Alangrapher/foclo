@@ -5,6 +5,7 @@ No threads. State persisted to slot_state table for crash recovery.
 """
 from __future__ import annotations
 
+import sqlite3
 import time
 from datetime import datetime, timedelta
 from app.storage import get_conn
@@ -73,8 +74,11 @@ class TimerEngine:
         slot.status = "running"
         slot.subject_id = subject_id
         slot.started_at = time.time()
-        # BUG 3: track the real wall-clock start time once, so archive() can use it
-        slot.started_at_real = datetime.now().isoformat()
+        # Track real wall-clock start time ONLY on fresh starts (not resume)
+        # so archive() gets the correct start_time.
+        # On resume, started_at_real from the original start is preserved.
+        if not slot.started_at_real:
+            slot.started_at_real = datetime.now().isoformat()
         self._save_slot(slot)
 
     def pause(self, index: int):
@@ -107,11 +111,19 @@ class TimerEngine:
         try:
             if slot.resume_record_id:
                 # Resume mode: UPDATE the original record, accumulate time
-                conn.execute(
+                cur = conn.execute(
                     "UPDATE records SET end_time=?, duration_s=duration_s+? WHERE id=?",
                     (end, int(total_s), slot.resume_record_id),
                 )
-                record_id = slot.resume_record_id
+                if cur.rowcount == 0:
+                    # Original record was deleted — fall back to INSERT
+                    cur = conn.execute(
+                        "INSERT INTO records (subject_id, description, start_time, end_time, duration_s, slot_index) VALUES (?, ?, ?, ?, ?, ?)",
+                        (slot.subject_id, slot.description, start, end, int(total_s), index),
+                    )
+                    record_id = cur.lastrowid
+                else:
+                    record_id = slot.resume_record_id
             else:
                 # Normal mode: INSERT new record
                 cur = conn.execute(

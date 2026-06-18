@@ -40,12 +40,19 @@ class Api:
         return {"ok": True, "width": int(width), "height": int(height)}
 
     def quit_app(self):
+        # Archive all active slots, then stop backup before exiting.
         # Defer process exit to background thread so the JS bridge
-        # call can return first. Calling anything Cocoa/AppKit from
-        # inside a JS→Py bridge callback risks deadlock because the
-        # JS thread is blocked waiting for this call to complete.
-        # os._exit(0) is safe: timers already paused/archived by the
-        # time this is called, so no data loss — WAL is crash-safe.
+        # call can return first — calling Cocoa/AppKit from inside
+        # a JS→Py bridge callback risks deadlock.
+        try:
+            self.archive_all_slots()
+        except Exception:
+            pass
+        if self._backup:
+            try:
+                self._backup.stop()
+            except Exception:
+                pass
         import os, threading
         threading.Timer(0.05, lambda: os._exit(0)).start()
         return {"ok": True}
@@ -297,6 +304,14 @@ class Api:
     def reset_all_data(self):
         """Delete all user data: records, todos, subjects, settings, slot_state."""
         from app.storage import get_conn
+        # Archive/clear active slots so in-memory state doesn't leak
+        # into the fresh DB after deletion
+        for i, s in enumerate(self.engine.slots):
+            if s.status != "idle":
+                try:
+                    self.engine.archive(i)
+                except Exception:
+                    self.engine.clear(i)
         conn = get_conn()
         try:
             conn.execute("BEGIN")

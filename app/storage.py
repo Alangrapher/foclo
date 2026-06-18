@@ -102,12 +102,14 @@ def init_db():
         # Migration: add started_at_real column for crash-safe archive accuracy
         try:
             conn.execute("ALTER TABLE slot_state ADD COLUMN started_at_real TEXT")
-        except sqlite3.OperationalError:
-            pass  # column already exists
+        except sqlite3.OperationalError as e:
+            if "duplicate column" not in str(e).lower():
+                raise
         try:
             conn.execute("ALTER TABLE todos ADD COLUMN subject_id INTEGER REFERENCES subjects(id)")
-        except sqlite3.OperationalError:
-            pass  # column already exists
+        except sqlite3.OperationalError as e:
+            if "duplicate column" not in str(e).lower():
+                raise
         conn.commit()
 
 

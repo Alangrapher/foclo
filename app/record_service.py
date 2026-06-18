@@ -99,25 +99,39 @@ def update_record(record_id: int, **kwargs) -> dict:
     if "start_time" in updates or "end_time" in updates:
         conn = get_conn()
         try:
+            conn.execute("BEGIN IMMEDIATE")
             row = conn.execute(
                 "SELECT start_time, end_time FROM records WHERE id=?",
                 (record_id,),
             ).fetchone()
+            if row is None:
+                conn.execute("ROLLBACK")
+                return {"ok": False, "error": "Record not found"}
+
+            final_start = updates.get("start_time", row["start_time"])
+            final_end = updates.get("end_time", row["end_time"])
+            start_dt = _parse_dt(final_start)
+            end_dt = _parse_dt(final_end)
+            if start_dt is None or end_dt is None:
+                conn.execute("ROLLBACK")
+                return {"ok": False, "error": "Invalid start/end time"}
+            if end_dt < start_dt:
+                end_dt = end_dt + timedelta(days=1)
+            duration_s = max(0, int((end_dt - start_dt).total_seconds()))
+            updates["duration_s"] = duration_s
+
+            set_clause = ", ".join(f"{k}=?" for k in updates)
+            conn.execute(
+                f"UPDATE records SET {set_clause} WHERE id=?",
+                (*updates.values(), record_id),
+            )
+            conn.commit()
+            return {"ok": True}
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
         finally:
             conn.close()
-        if row is None:
-            return {"ok": False, "error": "Record not found"}
-
-        final_start = updates.get("start_time", row["start_time"])
-        final_end = updates.get("end_time", row["end_time"])
-        start_dt = _parse_dt(final_start)
-        end_dt = _parse_dt(final_end)
-        if start_dt is None or end_dt is None:
-            return {"ok": False, "error": "Invalid start/end time"}
-        if end_dt < start_dt:
-            end_dt = end_dt + timedelta(days=1)
-        duration_s = max(0, int((end_dt - start_dt).total_seconds()))
-        updates["duration_s"] = duration_s
 
     conn = get_conn()
     try:

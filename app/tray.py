@@ -30,7 +30,7 @@ if IS_MAC:
             conn = get_conn()
             try:
                 row = conn.execute(
-                    "SELECT 1 FROM slot_state WHERE status = 'running' LIMIT 1"
+                    "SELECT 1 FROM slot_state WHERE status IN ('running','paused') OR elapsed_s > 0 LIMIT 1"
                 ).fetchone()
                 return row is not None
             finally:
