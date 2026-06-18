@@ -1,4 +1,20 @@
-let pyApi = window.pywebview ? window.pywebview.api : null;
+const REQUIRED_API_METHODS = [
+  'get_subjects',
+  'get_all_slots',
+  'get_todos',
+  'get_records',
+  'get_settings'
+];
+
+function getPyApi() {
+  return window.pywebview && window.pywebview.api ? window.pywebview.api : null;
+}
+
+function hasRequiredApiMethods(api) {
+  return !!api && REQUIRED_API_METHODS.every(name => typeof api[name] === 'function');
+}
+
+let pyApi = getPyApi();
 
 // localStorage wrapper — pywebview html= mode uses about:blank origin,
 // which WebKit blocks as insecure, throwing "The operation is insecure".
@@ -50,34 +66,38 @@ let exportFolder = '';
 let clockIntervalId = null;
 
 function whenReady(fn) {
-  if (window.pywebview && window.pywebview.api) {
-    pyApi = window.pywebview.api;
-    fn();
-  } else {
-    let attempts = 0;
-    const maxAttempts = 50; // 5 seconds total
-    const checkInterval = setInterval(() => {
-      attempts++;
-      if (window.pywebview && window.pywebview.api) {
-        clearInterval(checkInterval);
-        pyApi = window.pywebview.api;
-        fn();
-      } else if (attempts >= maxAttempts) {
-        clearInterval(checkInterval);
-        console.error('pywebview API not available after ' + maxAttempts + ' attempts');
-        // Fallback: render UI anyway (offline mode)
-        fn();
-      }
-    }, 100);
-    // Also listen for the event as backup
-    window.addEventListener('pywebviewready', () => {
+  let startedWithApi = false;
+  let renderedOffline = false;
+
+  const startIfReady = () => {
+    const api = getPyApi();
+    if (!hasRequiredApiMethods(api)) return false;
+    pyApi = api;
+    if (!startedWithApi) {
+      startedWithApi = true;
+      fn();
+    }
+    return true;
+  };
+
+  if (startIfReady()) return;
+
+  let attempts = 0;
+  const maxAttempts = 50; // 5 seconds before dev/offline fallback
+  const checkInterval = setInterval(() => {
+    attempts++;
+    if (startIfReady()) {
       clearInterval(checkInterval);
-      if (!pyApi) {
-        pyApi = window.pywebview.api;
-        fn();
-      }
-    });
-  }
+    } else if (attempts === maxAttempts && !renderedOffline && !window.pywebview) {
+      renderedOffline = true;
+      console.error('pywebview API not available after ' + maxAttempts + ' attempts; rendering offline state while continuing to wait');
+      fn();
+    }
+  }, 100);
+
+  window.addEventListener('pywebviewready', () => {
+    if (startIfReady()) clearInterval(checkInterval);
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -239,7 +259,12 @@ function bindStaticControls() {
 }
 
 async function loadAll() {
-  if (!window.pywebview || !window.pywebview.api) return;
+  const api = getPyApi();
+  if (!hasRequiredApiMethods(api)) {
+    renderAll();
+    return;
+  }
+  pyApi = api;
   try {
     await Promise.all([loadSubjects(), loadSlots(), loadTodos(), loadRecords(), loadSettings()]);
   } catch (e) {
@@ -250,14 +275,14 @@ async function loadAll() {
 }
 
 async function loadSubjects() {
-  const result = await callApi(window.pywebview.api.get_subjects(), 'Load subjects');
+  const result = await callApi(pyApi.get_subjects(), 'Load subjects');
   if (Array.isArray(result)) subjects = result;
 }
 
 async function loadSlots() {
   const localState = {};
   slots.forEach(s => { localState[s.index] = { subject_id: s.subject_id, description: s.description, collapsed: s.collapsed, pendingAction: s.pendingAction }; });
-  const result = await callApi(window.pywebview.api.get_all_slots(), 'Load timers');
+  const result = await callApi(pyApi.get_all_slots(), 'Load timers');
   if (Array.isArray(result)) slots = result;
   if (!slots.length) slots = [{index: 0, status: 'idle', subject_id: null, description: '', display_time: '00:00:00', collapsed: false}];
   slots.forEach(s => {
@@ -273,17 +298,17 @@ async function loadSlots() {
 }
 
 async function loadTodos() {
-  const result = await callApi(window.pywebview.api.get_todos(), 'Load todos');
+  const result = await callApi(pyApi.get_todos(), 'Load todos');
   if (Array.isArray(result)) todos = result;
 }
 
 async function loadRecords() {
-  const result = await callApi(window.pywebview.api.get_records(recordsFilter, weekStart), 'Load records');
+  const result = await callApi(pyApi.get_records(recordsFilter, weekStart), 'Load records');
   if (Array.isArray(result)) records = result;
 }
 
 async function loadSettings() {
-  const s = await callApi(window.pywebview.api.get_settings(), 'Load settings');
+  const s = await callApi(pyApi.get_settings(), 'Load settings');
   if (!s || s.ok === false) return;
   minimizeToTray = s.minimize_to_tray === '1';
   weekStart = s.week_starts_on === 'Monday' ? 'mon' : 'sun';

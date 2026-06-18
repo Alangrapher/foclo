@@ -1149,11 +1149,51 @@ function updateSubjectsCount() {
 <!-- Dynamic JS bridge — replaces prototype's static JS -->
 <script>
 // ═══ pywebview bridge ═══════════════════════════════════════
-const api = window.pywebview ? window.pywebview.api : null;
+let api = null;
+const REQUIRED_API_METHODS = [
+    'get_subjects',
+    'get_all_slots',
+    'get_todos',
+    'get_records',
+    'get_settings'
+];
+
+function getApi() {
+    return window.pywebview && window.pywebview.api ? window.pywebview.api : null;
+}
+
+function hasRequiredApiMethods(candidate) {
+    return !!candidate && REQUIRED_API_METHODS.every(name => typeof candidate[name] === 'function');
+}
 
 function ready(fn) {
-    if (api) { fn(); return; }
-    window.addEventListener('pywebviewready', fn);
+    let started = false;
+    const startIfReady = () => {
+        const candidate = getApi();
+        if (!hasRequiredApiMethods(candidate)) return false;
+        api = candidate;
+        if (!started) {
+            started = true;
+            fn();
+        }
+        return true;
+    };
+
+    if (startIfReady()) return;
+
+    let attempts = 0;
+    const checkInterval = setInterval(() => {
+        attempts++;
+        if (startIfReady()) {
+            clearInterval(checkInterval);
+        } else if (attempts === 50) {
+            console.error('pywebview API not ready yet; continuing to wait');
+        }
+    }, 100);
+
+    window.addEventListener('pywebviewready', () => {
+        if (startIfReady()) clearInterval(checkInterval);
+    });
 }
 
 // ═══ Global state mirror ═══════════════════════════════════
@@ -1465,8 +1505,8 @@ async function addSubject() {
 window.addSubject = addSubject;
 
 async function refreshSubjects() {
-    const subjects = await api.get_subjects();
-    renderSubjects(subjects);
+    _subjects = await api.get_subjects();
+    renderSubjects(_subjects);
 }
 
 function renderSubjects(subjects) {
@@ -1661,7 +1701,7 @@ async function saveRecordEdit(span) {
     const desc = tr.querySelector('.cell-desc input').value;
     const start = tr.querySelector('.cell-start input').value;
     const end = tr.querySelector('.cell-end input').value;
-    if (id && api) await api.update_record(id, description: desc, start_time: start, end_time: end);
+    if (id && api) await api.update_record(id, {description: desc, start_time: start, end_time: end});
     refreshRecords();
 }
 
