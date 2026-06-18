@@ -624,6 +624,15 @@ async function addRecord() {{
     if (endField) endField.value = '';
     refreshRecords();
 }}
+
+// ═══ Close button — minimize to tray (Windows) ═══
+const closeBtn = document.getElementById('closeBtn');
+if (closeBtn) {{
+    closeBtn.addEventListener('click', async () => {{
+        if (!api) return;
+        await api.hide_window();
+    }});
+}}
 </script>
 </body>
 </html>"""

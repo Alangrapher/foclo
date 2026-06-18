@@ -159,8 +159,9 @@ function bindStaticControls() {
   expandBtn.addEventListener('click', exitCompact);
   closeBtn.addEventListener('click', async () => {
     if (!pyApi) return;
-    // minimizeToTray only works on macOS (NSStatusBar)
-    if (minimizeToTray && navigator.platform.toLowerCase().includes('mac')) {
+    // minimizeToTray works on macOS (NSStatusBar) and Windows (pystray)
+    const isDesktop = navigator.platform.toLowerCase().includes('mac') || navigator.platform.toLowerCase().includes('win');
+    if (minimizeToTray && isDesktop) {
       await callApi(pyApi.hide_window(), 'Hide window');
     } else {
       try {
@@ -1072,10 +1073,10 @@ function renderSettings() {
   const defaultSlotsSelect = document.getElementById('defaultSlotsSelect');
   if (defaultSlotsSelect) defaultSlotsSelect.value = defaultSlots;
 
-  // minimize-to-tray only works on macOS — hide row on other platforms
-  const isMac = navigator.platform.toLowerCase().includes('mac');
+  // minimize-to-tray works on macOS and Windows
+  const isDesktop = navigator.platform.toLowerCase().includes('mac') || navigator.platform.toLowerCase().includes('win');
   const mtRow = document.getElementById('minimizeTrayRow');
-  if (mtRow) mtRow.style.display = isMac ? '' : 'none';
+  if (mtRow) mtRow.style.display = isDesktop ? '' : 'none';
 
   // ── Backup ──────────────────────────────────────────
 

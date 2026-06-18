@@ -86,10 +86,17 @@ def main():
     )
     api.set_window(window)
 
-    # Tray icon — macOS only (NSStatusBar + SF Symbols)
+    # Tray icon — macOS (NSStatusBar + SF Symbols) / Windows (pystray)
     if sys.platform == "darwin":
         from app.tray import TrayIcon
         tray = TrayIcon(window, check_fn=lambda: any(
+            s.status == "running" for s in api.engine.slots
+        ))
+        tray.start()
+        api.set_tray(tray)
+    elif sys.platform == "win32":
+        from app.tray_windows import WindowsTray
+        tray = WindowsTray(window, check_fn=lambda: any(
             s.status == "running" for s in api.engine.slots
         ))
         tray.start()

@@ -1,0 +1,1749 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alangrapher</title>
+<style>
+
+/* ═══════════════════════════════════════════════════════════
+   LIQUID GLASS — refined for 760×620
+   Icon style unified: all Unicode (no emoji)
+   ═══════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #F4F6FB; --sidebar: #EEF1F8; --card: #F7F9FD;
+  --text: #1B1F2A; --text2: #565B69; --muted: #888D9B;
+  --border: #D7DCE8; --hover: #EAEEF6;
+  --accent: #5E6AD2; --accent-h: #6E7AE6;
+  --running: #34C98B; --paused: #F0B73F; --idle: #9AA0AD;
+  --danger: #D64430; --radius: 20px; --radius-sm: 11px;
+}
+
+body {
+  font-family: 'HarmonyOS Sans SC', sans-serif;
+  background: #e8ecf2; display: flex; justify-content: center; align-items: center;
+  min-height: 100vh;
+}
+
+.window {
+  width: 760px; height: 620px; background: var(--bg);
+  border: 1px solid #c8cdd8; border-radius: 10px;
+  overflow: hidden; display: flex; flex-direction: column;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.08);
+}
+
+/* Top bar */
+.topbar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px; background: var(--sidebar);
+  border-bottom: 1px solid var(--border);
+}
+.topbar .dot { width: 10px; height: 10px; border-radius: 50%; }
+.dot-r { background: #ed6a5e; } .dot-y { background: #f5bd4f; } .dot-g { background: #61c454; }
+.topbar-title { font-size: 11px; color: var(--muted); margin-left: 8px; flex:1; }
+
+/* Layout */
+.prototype {
+  display: flex; flex: 1; overflow: hidden; background: var(--bg);
+}
+.prototype.showing-compact .content { display: none; }
+
+/* Sidebar */
+.sidebar {
+  width: 200px; background: var(--sidebar); border-right: 1px solid var(--border);
+  padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; flex-shrink: 0;
+}
+.sidebar-brand { font-size: 14px; font-weight: 700; color: var(--text); padding: 4px 8px 16px; }
+.nav-item {
+  padding: 8px 12px; border-radius: var(--radius-sm); cursor: pointer;
+  color: var(--text2); font-size: 13px; font-weight: 500;
+  transition: all 0.12s; display: flex; gap: 10px; align-items: center;
+}
+.nav-item:hover { background: var(--hover); color: var(--text); }
+.nav-item.active { background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent); font-weight: 600; }
+.nav-icon-svg { width: 18px; height: 18px; flex-shrink: 0; }
+.btn-icon { width: 14px; height: 14px; flex-shrink: 0; vertical-align: -2px; margin-right: 4px; }
+#compactBtn .btn-icon { margin-right: 0; }
+#compactBtn { padding: 9px 12px; line-height: 1; }
+#compactBtn .btn-icon { margin-right: 0; }
+#compactBtn { padding: 9px 12px; line-height: 1; }
+.add-slot-btn {
+  background: none; border: 1px dashed var(--border); color: var(--muted);
+  width: 24px; height: 24px; border-radius: 6px; cursor: pointer;
+  font-size: 14px; line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+  transition: all 0.12s; flex-shrink: 0;
+}
+.add-slot-btn:hover { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.sidebar-footer { padding-top: 12px; border-top: 1px solid var(--border); margin-top: auto; }
+.theme-toggle {
+  width: 100%; padding: 8px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--card);
+  color: var(--text2); cursor: pointer; font-size: 12px; font-weight: 600;
+  transition: all 0.12s; font-family: inherit;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.theme-toggle:hover { background: var(--hover); color: var(--text); }
+.sidebar-tagline { font-size: 10px; color: var(--muted); margin-top: 6px; text-align: center; }
+
+/* Content */
+.content { flex: 1; overflow-y: auto; padding: 18px 22px; }
+
+/* Cards */
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
+}
+
+/* Slot header */
+.slot-header { display: flex; align-items: center; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+.slot-label { font-size: 12px; color: var(--muted); font-weight: 600; }
+.slot-clock-mini { font-size: 14px; font-weight: 700; color: var(--text); }
+.slot-subject { font-size: 13px; color: var(--text2); flex: 1; }
+
+/* Badge */
+.badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 14px; font-size: 11px; font-weight: 600; }
+.badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+.badge.idle { background: color-mix(in srgb, var(--idle) 15%, transparent); color: var(--text2); }
+.badge.idle .dot { background: var(--idle); }
+.badge.running { background: color-mix(in srgb, var(--running) 15%, transparent); color: var(--running); }
+.badge.running .dot { background: var(--running); }
+.badge.paused { background: color-mix(in srgb, var(--paused) 15%, transparent); color: var(--paused); }
+.badge.paused .dot { background: var(--paused); }
+
+/* Timer */
+.timer-clock { font-family: 'JetBrains Mono', monospace; font-size: 54px; font-weight: 700; color: var(--text); text-align: center; padding: 14px 0 6px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.timer-subject-line { text-align: center; font-size: 13px; color: var(--text2); margin-bottom: 10px; }
+
+/* Form */
+.form-row { margin-bottom: 10px; }
+.form-label { font-size: 11px; font-weight: 700; color: var(--text2); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
+.form-select, .form-input {
+  width: 100%; padding: 8px 12px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--bg); color: var(--text);
+  font-size: 13px; font-family: inherit;
+}
+.form-select:focus, .form-input:focus { outline: none; border-color: var(--accent); }
+.form-select {
+  appearance: none; -webkit-appearance: none;
+  background-image: none;
+  padding-right: 28px;
+  position: relative;
+}
+/* Custom dropdown arrow matching slot-header ▲ style */
+.select-wrapper { position: relative; display: block; }
+.select-wrapper::after {
+  content: '▾'; font-size: 10px; color: var(--muted);
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* Buttons */
+.btn-row { display: flex; gap: 8px; margin-top: 10px; }
+.btn {
+  padding: 9px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600;
+  cursor: pointer; border: none; transition: all 0.12s; font-family: inherit;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-h); }
+.btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--hover); }
+.btn-sm { padding: 5px 12px; font-size: 11px; }
+
+/* Tiles */
+.tile-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.tile { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.tile-label { font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+.tile-value { font-size: 24px; font-weight: 700; color: var(--text); }
+.tile-value.accent { color: var(--accent); }
+
+/* Records */
+.records-header { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.records-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.records-table th { text-align: left; padding: 8px 10px; color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid var(--border); }
+.records-table td { padding: 9px 10px; color: var(--text); border-bottom: 1px solid var(--border); }
+.records-table tr:last-child td { border-bottom: none; }
+
+/* Page */
+.page-header { margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-end; }
+.page-title { font-size: 20px; font-weight: 700; color: var(--text); }
+.page-sub { font-size: 11px; color: var(--text2); margin-top: 3px; }
+
+.prototype.showing-compact .sidebar { display: none; }
+.prototype.showing-compact .content { display: none; }
+
+/* Compact panel — standalone mini window */
+.compact-panel {
+  display: none; flex-direction: column; align-items: center;
+  width: 300px; background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 24px 24px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  z-index: 200;
+}
+.prototype.showing-compact { justify-content: center; align-items: center; display: flex !important; }
+.prototype.showing-compact .compact-panel {
+  display: flex !important;
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+}
+.compact-top { display: flex; align-items: center; margin-bottom: 10px; }
+.compact-clock { font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 700; color: var(--text); text-align: center; letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+.compact-subject { text-align: center; font-size: 11px; color: var(--muted); margin-bottom: 10px; line-height: 1.3; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.compact-timer-row { display: flex; align-items: center; margin-bottom: 12px; }
+.compact-timer-row .arrow { font-size: 10px; cursor: pointer; color: var(--muted); padding: 2px 0; border-radius: 3px; line-height: 1; flex-shrink: 0; }
+.compact-timer-row .arrow:first-child { margin-left: -2px; }
+.compact-timer-row .arrow:last-child { margin-right: -2px; }
+.compact-timer-row .arrow:hover { color: var(--text); background: var(--hover); }
+.compact-clock-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.compact-slot-indicator { font-size: 8px; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
+.compact-actions { display: flex; gap: 10px; }
+.compact-actions .btn { flex: 1; text-align: center; padding: 8px 14px; font-size: 12px; border-radius: 8px; white-space: nowrap; }
+.compact-expand { position: absolute; top: 10px; right: 14px; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 10px; padding: 1px; border-radius: 3px; font-family: inherit; line-height: 1; }
+.compact-expand:hover { color: var(--text); background: var(--hover); }
+.compact-panel .badge { font-size: 10px; padding: 2px 8px; border-radius: 8px; }
+.compact-panel .btn-icon { width: 14px; height: 14px; }
+
+/* Page switching */
+.page { display: none; }
+.page.active { display: block; }
+
+/* Todo list */
+.todo-list { display: flex; flex-direction: column; }
+.todo-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 4px; border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
+}
+.todo-item:last-child { border-bottom: none; }
+.todo-item:hover { background: var(--hover); }
+.todo-checkbox {
+  width: 18px; height: 18px; border: 2px solid var(--border);
+  border-radius: 4px; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; font-size: 11px; color: transparent; font-weight: 700;
+}
+.todo-checkbox:hover { border-color: var(--accent); }
+.todo-item.done .todo-checkbox { background: var(--accent); border-color: var(--accent); color: #fff; }
+.todo-item.done .todo-checkbox::after { content: '✓'; }
+.todo-item.done .todo-item-subject { text-decoration: line-through; color: var(--muted); }
+.todo-item.done .todo-item-desc { color: var(--muted); }
+.todo-item-info { flex: 1; min-width: 0; }
+.todo-item-subject { font-size: 13px; font-weight: 600; color: var(--text); }
+.todo-item-desc { font-size: 11px; color: var(--text2); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.todo-item-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.todo-item .btn { flex-shrink: 0; }
+.todo-start-btn {
+  width: 28px; height: 28px; flex-shrink: 0; visibility: hidden;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border-radius: 6px; color: var(--muted);
+  transition: all 0.12s;
+}
+.todo-del-btn {
+  width: 28px; height: 28px; flex-shrink: 0; visibility: hidden;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border-radius: 6px; color: var(--muted);
+  transition: all 0.12s; margin-right: 2px;
+}
+.todo-item:hover .todo-start-btn,
+.todo-item:hover .todo-del-btn { visibility: visible; }
+.todo-start-btn:hover { background: var(--accent); color: #fff; }
+.todo-del-btn:hover { background: #cc2200; color: #fff; }
+.todo-item.done .todo-start-btn { visibility: hidden !important; }
+
+/* Filter chips */
+.filter-chips { display: flex; gap: 6px; }
+.chip {
+  font-size: 11px; padding: 4px 12px; border-radius: 14px;
+  border: 1px solid var(--border); color: var(--text2); cursor: pointer;
+  font-weight: 500; transition: all 0.12s;
+}
+.chip:hover { background: var(--hover); }
+.chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* Records: inline actions (hidden until hover) */
+.records-actions { display: inline-flex; gap: 6px; visibility: hidden; }
+tr:hover .records-actions { visibility: visible; }
+.records-actions .act { color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px 4px; border-radius: 4px; display: inline-flex; align-items: center; }
+.records-actions .act:hover { color: var(--text); background: var(--hover); }
+.records-actions .act.del:hover { color: var(--danger); }
+
+/* Records: table → list style */
+.records-scroll-wrap { overflow-x: auto; max-width: 100%; }
+.records-date-col { display: none; }
+.showing-dates .records-date-col { display: table-cell; }
+.showing-dates th.records-date-col { display: table-cell; }
+.records-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.records-table th { text-align: left; padding: 6px 4px 8px; color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid var(--border); }
+.records-table td { padding: 8px 4px; color: var(--text); border-bottom: 1px solid var(--border); }
+.records-table tbody tr:hover td { background: var(--hover); }
+.records-table tr:last-child td { border-bottom: none; }
+
+/* Records: inline add row — unified */
+.records-add-row { display: flex; gap: 8px; align-items: center; padding: 6px 4px; margin-bottom: 8px; border-bottom: 1px solid var(--border); }
+.records-add-row input, .records-add-row select { border: none; background: transparent; font-size: 12px; color: var(--text); font-family: inherit; padding: 4px 6px; outline: none; flex: 1; min-width: 0; }
+.records-add-row input:focus, .records-add-row select:focus { border-bottom: 1px solid var(--accent); }
+.records-add-row .confirm-btn { background: var(--accent); color: #fff; border: none; border-radius: 6px; width: 24px; height: 24px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.records-add-row .confirm-btn:hover { background: var(--accent-h); }
+
+/* Records: inline edit mode */
+tr.records-editing td { padding: 4px 6px; }
+tr.records-editing td input, tr.records-editing td select { width: 100%; border: 1px solid var(--accent); border-radius: 6px; padding: 4px 6px; font-size: 12px; color: var(--text); background: var(--bg); font-family: inherit; box-sizing: border-box; }
+tr.records-editing td input:focus, tr.records-editing td select:focus { outline: none; border-color: var(--accent); }
+.edit-actions-inline { display: inline-flex; gap: 4px; }
+.edit-actions-inline .act { color: var(--text2); cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 4px; }
+.edit-actions-inline .act:hover { color: var(--text); background: var(--hover); }
+.edit-actions-inline .save { color: var(--accent); }
+.edit-actions-inline .cancel { color: var(--muted); }
+
+/* Subjects list */
+.subjects-list { display: flex; flex-direction: column; }
+.subject-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 4px; border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
+}
+.subject-row:last-child { border-bottom: none; }
+.subject-row:hover { background: var(--hover); }
+.subject-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.subject-name { font-size: 13px; color: var(--text); flex: 1; }
+.subject-actions { display: flex; gap: 4px; visibility: hidden; }
+.subject-row:hover .subject-actions { visibility: visible; }
+.act { color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px 4px; border-radius: 4px; }
+.act:hover { color: var(--text); background: var(--hover); }
+
+/* Settings list */
+.settings-list { display: flex; flex-direction: column; }
+.setting-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 0; border-bottom: 1px solid var(--border);
+}
+.setting-row:last-child { border-bottom: none; }
+.setting-info { flex: 1; }
+.setting-label { font-size: 13px; font-weight: 600; color: var(--text); }
+.setting-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* Toggle switch */
+.toggle { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--border); border-radius: 11px; transition: 0.2s;
+}
+.toggle-slider::before {
+  content: ""; position: absolute; height: 16px; width: 16px;
+  left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.2s;
+}
+.toggle input:checked + .toggle-slider { background: var(--accent); }
+.toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
+
+/* Easter egg: sidebar footer clickable in dark mode */
+.easter-egg-trigger { cursor: pointer; }
+
+/* ═══════════════════════════════════════════════════════════
+   MOSS MODE (LIGHT) — 8x click easter egg
+   ═══════════════════════════════════════════════════════════ */
+html.moss {
+  --bg: #f8f6f5; --sidebar: #f2efed; --card: #ffffff;
+  --text: #1a1a1f; --text2: #8b5555; --muted: #a08080;
+  --border: #d5c8c5; --hover: #f0e8e6;
+  --accent: #cc2200; --accent-h: #dd3311;
+  --running: #cc2200; --paused: #b86644; --idle: #8b5555;
+  --danger: #992200; --radius: 20px; --radius-sm: 11px;
+  font-family: 'JetBrains Mono', monospace;
+}
+html.moss body {
+  background: #ebe5e2;
+}
+html.moss .window {
+  border-color: #d5c8c5;
+  box-shadow: 0 12px 48px rgba(180,120,100,0.10);
+  background: #f8f6f5;
+}
+html.moss .sidebar,
+html.moss .card {
+  border-left: 3px solid #cc2200;
+}
+html.moss .topbar {
+  background: #f2efed;
+  border-bottom: 1px solid #cc2200;
+}
+html.moss .topbar-title {
+  color: #cc2200; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+}
+html.moss .avatar-badge { display: none; }
+html.moss .nav-item.active {
+  background: #f0e0d8;
+  color: #cc2200;
+  border-left: 2px solid #cc2200;
+  border-radius: 0 11px 11px 0;
+  margin-left: -10px;
+  padding-left: 20px;
+}
+html.moss .nav-item:hover {
+  background: #f0e8e6;
+}
+html.moss .btn-primary {
+  background: #cc2200; color: #fff;
+}
+html.moss .btn-primary:hover {
+  background: #dd3311;
+}
+html.moss .btn-secondary {
+  border: 1px solid #d5c8c5; color: #1a1a1f;
+}
+html.moss .btn-secondary:hover {
+  background: #f0e8e6;
+}
+html.moss .badge.running {
+  background: rgba(204,34,0,0.12); color: #cc2200;
+}
+html.moss .badge.running .dot { background: #cc2200; }
+html.moss .badge.paused {
+  background: rgba(184,102,68,0.12); color: #b86644;
+}
+html.moss .badge.paused .dot { background: #b86644; }
+html.moss .badge.idle {
+  background: rgba(139,85,85,0.10); color: #8b5555;
+}
+html.moss .badge.idle .dot { background: #8b5555; }
+html.moss .tile-value.accent { color: #cc2200; }
+html.moss .chip.active {
+  background: #cc2200; border-color: #cc2200;
+}
+html.moss .toggle input:checked + .toggle-slider {
+  background: #cc2200;
+}
+html.moss .modal-accent { background: #cc2200; }
+html.moss .sidebar-brand {
+  color: #cc2200; font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+html.moss .sidebar-tagline {
+  font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #cc2200;
+}
+html.moss .form-select:focus,
+html.moss .form-input:focus { border-color: #cc2200; }
+html.moss .btn-start { background: #cc2200; }
+html.moss .btn-start:hover { background: #dd3311; }
+html.moss .compact-panel { border-color: #cc2200; }
+/* Remove green entirely */
+html.moss .dot-g { background: #cc2200; }
+html.moss .dot-y { background: #b86644; }
+html.moss .dot-r { background: #8b5555; }
+
+/* ═══════════════════════════════════════════════════════════
+   DARK MODE — CSS variable overrides (aligned to SPEC tokens)
+   ═══════════════════════════════════════════════════════════ */
+html.dark {
+  --bg: #0D1117; --sidebar: #161B22; --card: #1C2128;
+  --text: #E6EDF3; --text2: #8B949E; --muted: #6E7681;
+  --border: #30363D; --hover: #21262D;
+  --accent: #6E7AE6; --accent-h: #8B90F8;
+  --running: #34C98B; --paused: #F0B73F; --idle: #5E6178;
+  --danger: #D64430;
+}
+html.dark body { background: #0A0C10; }
+html.dark .window { border-color: #30363D; box-shadow: 0 12px 48px rgba(0,0,0,0.20); }
+
+/* Modal overlay */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+  z-index: 999; display: none; justify-content: center; align-items: center;
+}
+.modal-overlay.show { display: flex; }
+.modal-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px 32px; max-width: 440px;
+  width: 90%; box-shadow: 0 16px 48px rgba(0,0,0,0.18);
+}
+.modal-accent { height: 4px; background: var(--accent); border-radius: 2px; margin-bottom: 20px; }
+.modal-title { font-family: 'Songti SC', 'STSong', serif; font-size: 24px; font-weight: 700; color: var(--text); text-align: center; margin-bottom: 4px; }
+.modal-subtitle { font-family: 'Apple Chancery', 'Snell Roundhand', cursive; font-size: 14px; color: var(--muted); text-align: center; margin-bottom: 18px; }
+.modal-quote { text-align: center; font-size: 14px; color: var(--text); font-weight: 600; margin-bottom: 2px; font-style: italic; }
+.modal-quote-en { text-align: center; font-family: 'Apple Chancery', 'Snell Roundhand', cursive; font-size: 13px; color: var(--text2); margin-bottom: 16px; font-style: italic; }
+.modal-divider { height: 1px; background: var(--border); margin: 14px 0; }
+.modal-rule { margin-bottom: 16px; text-align: center; }
+.modal-rule-no { font-family: 'HarmonyOS Sans SC', sans-serif; font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 2px; text-align: center; }
+.modal-rule-zh { font-family: 'Songti SC', 'STSong', serif; font-size: 15px; color: var(--text); font-weight: 600; line-height: 1.85; text-align: center; }
+.modal-rule-en { font-family: 'Apple Chancery', 'Snell Roundhand', cursive; font-size: 13px; color: var(--text2); margin-top: 2px; text-align: center; }
+.modal-signature { text-align: center; font-family: 'Apple Chancery', 'Snell Roundhand', cursive; font-size: 18px; color: var(--accent); margin: 18px 0 24px; }
+.modal-close { display: none; }
+
+
+</style>
+</head>
+<body>
+
+<div class="window">
+  
+  <div class="prototype" id="prototype" style="position:relative;">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">Alangrapher</div>
+      <nav style="display:flex;flex-direction:column;gap:1px;flex:1;">
+        <div class="nav-item active" data-page="timer">
+          <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></svg>
+          <span>Timer</span></div>
+        <div class="nav-item" data-page="todo">
+          <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><rect x="3" y="4" width="6" height="6" rx="1"/></svg>
+          <span>Todo</span></div>
+        <div class="nav-item" data-page="records">
+          <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/></svg>
+          <span>Records</span></div>
+        <div class="nav-item" data-page="subjects">
+          <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17a4 4 0 0 1-8 0V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2Z"/><path d="M16.7 13H19a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H7"/><path d="M 7 17h.01"/><path d="m11 8 2.3-2.3a2.4 2.4 0 0 1 3.404.004L18.6 7.6a2.4 2.4 0 0 1 .026 3.434L9.9 19.8"/></svg>
+          <span>Subjects</span></div>
+        <div class="nav-item" data-page="export">
+          <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1"/><path d="M2 13h10"/><path d="m9 16 3-3-3-3"/></svg>
+          <span>Export</span></div>
+        <div class="nav-item" data-page="settings">
+          <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><circle cx="12" cy="12" r="4"/></svg>
+          <span>Settings</span></div>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="theme-toggle" id="darkToggle"><svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 5h4"/><path d="M20 3v4"/><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg> Dark</button>
+        <div class="sidebar-tagline easter-egg-trigger" id="easterEggTrigger">Code of Timing</div>
+      </div>
+    </aside>
+
+    <!-- Content -->
+    <main class="content">
+      <div class="page active" id="page-timer">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Timer</div>
+          <div class="page-sub">Today · 2026-06-12 &nbsp; Week 24 (Mon–Fri)</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="compactBtn" title="Compact mode"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 15 6 6m-6-6v4.8m0-4.8h4.8"/><path d="M9 19.8V15m0 0H4.2M9 15l-6 6"/><path d="M15 4.2V9m0 0h4.8M15 9l6-6"/><path d="M9 4.2V9m0 0H4.2M9 9 3 3"/></svg></button>
+      </div>
+
+      <div class="card">
+        <div class="slot-header">
+          <span class="slot-label">Timer 1</span>
+          <span class="badge idle"><span class="dot"></span> Idle</span>
+          <span class="slot-subject">—</span>
+          <span style="color:var(--muted);cursor:pointer;font-size:13px;"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+          <span style="color:var(--muted);cursor:pointer;font-size:11px;"><svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+          <button class="add-slot-btn" title="Add timer slot (max 5)"><svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+        </div>
+        <div class="timer-clock">00:00:00</div>
+        <div class="timer-subject-line">—</div>
+        <div class="form-row"><div class="form-label">Subject</div><div class="select-wrapper"><select class="form-select"><option>— Select subject —</option></select></div></div>
+        <div class="form-row"><div class="form-label">Description (optional)</div><input class="form-input" placeholder="What are you working on?"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" style="flex:1;"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>Start</button>
+          <button class="btn btn-secondary" style="flex:1;"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 15h18"/><path d="m15 8-3 3-3-3"/></svg>Archive</button>
+        </div>
+      </div>
+
+      <div class="tile-row">
+        <div class="tile"><div class="tile-label">Today</div><div class="tile-value">3h 15m</div></div>
+        <div class="tile"><div class="tile-label">This Week</div><div class="tile-value accent">12h 30m</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:0;">
+        <div class="records-header">Today's Records</div>
+        <table class="records-table">
+          <thead><tr><th>Subject</th><th>Description</th><th style="text-align:right">Duration</th></tr></thead>
+          <tbody>
+            <tr><td>Code Review</td><td>PR #142 — auth module</td><td style="text-align:right">1h 30m</td></tr>
+            <tr><td>Design System</td><td>Token audit</td><td style="text-align:right">45m</td></tr>
+            <tr><td>Documentation</td><td>—</td><td style="text-align:right">1h 00m</td></tr>
+          </tbody>
+        </table>
+      </div>
+      </div>
+
+      <div class="page" id="page-todo">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Todo</div>
+            <div class="page-sub">3 pending · 0 done</div>
+          </div>
+        </div>
+
+        <!-- Inline add — subject + description -->
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 4px;margin-bottom:8px;border-bottom:1px solid var(--border);">
+          <span style="color:var(--muted);font-size:13px;flex-shrink:0;">+</span>
+          <input id="todoSubject" placeholder="Subject" style="flex:1;background:transparent;border:none;padding:6px 4px;font-size:13px;color:var(--text);outline:none;border-bottom:1px solid transparent;" onfocus="this.style.borderBottomColor='var(--accent)'" onblur="this.style.borderBottomColor='transparent'" onkeydown="if(event.key==='Enter')addTodo()">
+          <input id="todoDesc" placeholder="Description (optional)" style="flex:2;background:transparent;border:none;padding:6px 4px;font-size:12px;color:var(--text2);outline:none;border-bottom:1px solid transparent;" onfocus="this.style.borderBottomColor='var(--accent)'" onblur="this.style.borderBottomColor='transparent'" onkeydown="if(event.key==='Enter')addTodo()">
+          <button class="btn btn-primary btn-sm" onclick="addTodo()" style="padding:4px 10px;font-size:11px;border-radius:6px;">✓</button>
+        </div>
+
+        <div class="todo-list">
+          <div class="todo-item">
+            <div class="todo-checkbox" onclick="toggleTodo(this)"></div>
+            <div class="todo-item-info">
+              <div class="todo-item-subject">Code Review</div>
+              <div class="todo-item-desc">PR #144 — payment module refactor</div>
+            </div>
+            <span class="todo-start-btn" onclick="startTodoTimer(this)" title="Start timer"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></span>
+          </div>
+          <div class="todo-item">
+            <div class="todo-checkbox" onclick="toggleTodo(this)"></div>
+            <div class="todo-item-info">
+              <div class="todo-item-subject">Design System</div>
+              <div class="todo-item-desc">Component token audit — Phase 2</div>
+            </div>
+            <span class="todo-start-btn" onclick="startTodoTimer(this)" title="Start timer"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></span>
+          </div>
+          <div class="todo-item">
+            <div class="todo-checkbox" onclick="toggleTodo(this)"></div>
+            <div class="todo-item-info">
+              <div class="todo-item-subject">Documentation</div>
+              <div class="todo-item-desc">API reference — v2 migration guide</div>
+            </div>
+            <span class="todo-start-btn" onclick="startTodoTimer(this)" title="Start timer"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Records ═══ -->
+      <div class="page" id="page-records">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Records</div>
+            <div class="page-sub">Filter by date · <span id="recordsCount">6</span> entries total</div>
+          </div>
+          <div class="filter-chips">
+            <span class="chip active" onclick="setRecordsFilter('Today')">Today</span>
+            <span class="chip" onclick="setRecordsFilter('Week')">This Week</span>
+            <span class="chip" onclick="setRecordsFilter('Month')">This Month</span>
+            <span class="chip" onclick="setRecordsFilter('All')">All</span>
+          </div>
+        </div>
+        <!-- Inline add form row -->
+        <div class="records-add-row" id="recordsAddRow">
+          <input type="date" id="recordsDateField" class="records-add-date" value="2026-06-12" style="flex:0 0 110px; border-bottom-style:solid; display:none;">
+          <select class="records-add-subject" style="flex:0.7;">
+            <option>Code Review</option><option>Design System</option><option>Documentation</option><option>Meeting</option><option>Research</option>
+          </select>
+          <input type="text" class="records-add-desc" placeholder="Description" style="flex:1.3;">
+          <input type="time" class="records-add-start" value="09:00">
+          <input type="time" class="records-add-end" value="10:00">
+          <button class="confirm-btn" onclick="addRecord()">✓</button>
+        </div>
+        <div class="records-scroll-wrap">
+        <table class="records-table">
+            <thead><tr><th class="records-date-col">Date</th><th>Subject</th><th>Description</th><th>Start</th><th>End</th><th style="text-align:right">Duration</th><th style="width:60px"></th></tr></thead>
+            <tbody id="recordsBody">
+              <tr data-date="2026-06-12" data-subject="Code Review" data-desc="PR #142 — auth module" data-start="09:30" data-end="11:00" data-dur="1h 30m"><td class="cell-date records-date-col">2026-06-12</td><td class="cell-subj">Code Review</td><td class="cell-desc">PR #142 — auth module</td><td class="cell-start">09:30</td><td class="cell-end">11:00</td><td class="cell-dur" style="text-align:right">1h 30m</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>
+              <tr data-date="2026-06-12" data-subject="Design System" data-desc="Token audit" data-start="11:15" data-end="12:00" data-dur="45m"><td class="cell-date records-date-col">2026-06-12</td><td class="cell-subj">Design System</td><td class="cell-desc">Token audit</td><td class="cell-start">11:15</td><td class="cell-end">12:00</td><td class="cell-dur" style="text-align:right">45m</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>
+              <tr data-date="2026-06-12" data-subject="Documentation" data-desc="API migration guide" data-start="13:00" data-end="14:00" data-dur="1h 00m"><td class="cell-date records-date-col">2026-06-12</td><td class="cell-subj">Documentation</td><td class="cell-desc">API migration guide</td><td class="cell-start">13:00</td><td class="cell-end">14:00</td><td class="cell-dur" style="text-align:right">1h 00m</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>
+              <tr data-date="2026-06-12" data-subject="Meeting" data-desc="Sprint planning" data-start="14:30" data-end="15:15" data-dur="45m"><td class="cell-date records-date-col">2026-06-12</td><td class="cell-subj">Meeting</td><td class="cell-desc">Sprint planning</td><td class="cell-start">14:30</td><td class="cell-end">15:15</td><td class="cell-dur" style="text-align:right">45m</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>
+              <tr data-date="2026-06-12" data-subject="Research" data-desc="Competitor analysis" data-start="15:30" data-end="16:30" data-dur="1h 00m"><td class="cell-date records-date-col">2026-06-12</td><td class="cell-subj">Research</td><td class="cell-desc">Competitor analysis</td><td class="cell-start">15:30</td><td class="cell-end">16:30</td><td class="cell-dur" style="text-align:right">1h 00m</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>
+              <tr data-date="2026-06-12" data-subject="Code Review" data-desc="PR #144 — payment refactor" data-start="16:45" data-end="18:00" data-dur="1h 15m"><td class="cell-date records-date-col">2026-06-12</td><td class="cell-subj">Code Review</td><td class="cell-desc">PR #144 — payment refactor</td><td class="cell-start">16:45</td><td class="cell-end">18:00</td><td class="cell-dur" style="text-align:right">1h 15m</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ Subjects ═══ -->
+      <div class="page" id="page-subjects">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Subjects</div>
+            <div class="page-sub">5 subjects — manage your activity categories</div>
+          </div>
+        </div>
+        <!-- Inline add row -->
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 4px;margin-bottom:8px;border-bottom:1px solid var(--border);">
+          <span class="subject-dot" style="background:#5E6AD2;cursor:pointer;" onclick="const colors=['#5E6AD2','#D97A52','#2DA44E','#7B85E8','#CC5544','#E5A837','#6B7DB3','#9B59B6'];const i=parseInt(prompt('Pick color 0-7:','0'));if(i>=0&&i<8)this.style.background=colors[i]"></span>
+          <input class="form-input" placeholder="Subject name" style="flex:1;border:none;background:transparent;padding:6px 8px;font-size:13px;" onkeydown="if(event.key==='Enter')addSubject()">
+          <button class="btn btn-primary btn-sm" style="padding:4px 10px;font-size:11px;" onclick="addSubject()">✓</button>
+        </div>
+        <div class="subjects-list">
+          <div class="subject-row"><span class="subject-dot" style="background:#5E6AD2;"></span><span class="subject-name">Code Review</span><span class="subject-actions"><span class="act" onclick="editSubject(this)">✎</span><span class="act" onclick="delSubject(this)">🗑</span></span></div>
+          <div class="subject-row"><span class="subject-dot" style="background:#34C98B;"></span><span class="subject-name">Design System</span><span class="subject-actions"><span class="act" onclick="editSubject(this)">✎</span><span class="act" onclick="delSubject(this)">🗑</span></span></div>
+          <div class="subject-row"><span class="subject-dot" style="background:#F0B73F;"></span><span class="subject-name">Documentation</span><span class="subject-actions"><span class="act" onclick="editSubject(this)">✎</span><span class="act" onclick="delSubject(this)">🗑</span></span></div>
+          <div class="subject-row"><span class="subject-dot" style="background:#4DA6FF;"></span><span class="subject-name">Meeting</span><span class="subject-actions"><span class="act" onclick="editSubject(this)">✎</span><span class="act" onclick="delSubject(this)">🗑</span></span></div>
+          <div class="subject-row"><span class="subject-dot" style="background:#D64430;"></span><span class="subject-name">Research</span><span class="subject-actions"><span class="act" onclick="editSubject(this)">✎</span><span class="act" onclick="delSubject(this)">🗑</span></span></div>
+        </div>
+      </div>
+
+      <!-- ═══ Export ═══ -->
+      <div class="page" id="page-export">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Export</div>
+            <div class="page-sub">Last export: No exports yet</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="form-row"><div class="form-label">Date Range</div><div style="display:flex;gap:8px;"><input class="form-input" value="2026-06-05" style="flex:1;"><span style="color:var(--muted);align-self:center;">→</span><input class="form-input" value="2026-06-12" style="flex:1;"></div></div>
+          <div class="form-row"><div class="form-label">Format</div><div style="display:flex;gap:8px;"><button class="btn btn-secondary active">Excel (.xlsx)</button><button class="btn btn-secondary">Markdown</button><button class="btn btn-secondary">JSON</button></div></div>
+          <button class="btn btn-primary" style="width:100%;margin-top:4px;"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1"/><path d="M2 13h10"/><path d="m9 16 3-3-3-3"/></svg> Export</button>
+        </div>
+      </div>
+
+      <!-- ═══ Settings ═══ -->
+      <div class="page" id="page-settings">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Settings</div>
+            <div class="page-sub">Application preferences</div>
+          </div>
+        </div>
+        <div class="settings-list">
+          <div class="setting-row">
+            <div class="setting-info"><div class="setting-label">Week starts on</div><div class="setting-desc">First day of the week for tracking</div></div>
+            <select class="form-select" style="width:100px;"><option>Monday</option><option>Sunday</option></select>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info"><div class="setting-label">Compact by default</div><div class="setting-desc">Start in compact floating mode</div></div>
+            <label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info"><div class="setting-label">Default Slots</div><div class="setting-desc">Number of concurrent timer slots</div></div>
+            <select class="form-select" style="width:80px;"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info"><div class="setting-label">Auto Backup</div><div class="setting-desc">Hourly backup to ~/Documents/Alangrapher/backups/</div></div>
+            <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info"><div class="setting-label">Backup Location</div><div class="setting-desc">~/Documents/Alangrapher/backups/</div></div>
+            <button class="btn btn-secondary btn-sm">Choose…</button>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info"><div class="setting-label">Minimize to Tray</div><div class="setting-desc">Close window sends to system tray</div></div>
+            <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row" style="border-bottom:none;">
+            <div class="setting-info"><div class="setting-label" style="color:var(--danger);">Reset All Data</div><div class="setting-desc">Permanently delete all records, todos, subjects, and settings</div></div>
+            <button class="btn btn-sm" style="background:var(--danger);color:#fff;font-weight:600;padding:6px 14px;border-radius:8px;cursor:pointer;border:none;font-size:11px;">Reset</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Compact floating -->
+    <div class="compact-panel" id="compactPanel">
+      <button class="compact-expand" id="expandBtn"><svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 15 6 6"/><path d="m15 9 6-6"/><path d="M21 16v5h-5"/><path d="M21 8V3h-5"/><path d="M3 16v5h5"/><path d="m3 21 6-6"/><path d="M3 8V3h5"/><path d="M9 9 3 3"/></svg></button>
+      <div class="compact-top">
+        <span class="badge running"><span class="dot"></span> Running</span>
+      </div>
+      <div class="compact-timer-row">
+        <span class="arrow"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></span>
+        <div class="compact-clock-wrap">
+          <div class="compact-slot-indicator">1 / 3</div>
+          <div class="compact-clock">01:23:45</div>
+        </div>
+        <span class="arrow"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span>
+      </div>
+      <div class="compact-subject">Code Review — PR #142</div>
+      <div class="compact-actions">
+        <button class="btn btn-primary"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/></svg>Pause</button>
+        <button class="btn btn-secondary"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 15h18"/><path d="m15 8-3 3-3-3"/></svg>Archive</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Easter egg modal -->
+<div class="modal-overlay" id="easterEggModal">
+  <div class="modal-card">
+    <div class="modal-accent"></div>
+    <div class="modal-title">《Alangrapher 计时准则》</div>
+    <div class="modal-subtitle">The Alangrapher's Code of Timing</div>
+    <div class="modal-quote">"时间不会说谎。"</div>
+    <div class="modal-quote-en">"Time tells no lie."</div>
+    <div class="modal-divider"></div>
+    <div class="modal-rule"><div class="modal-rule-no">规则 1</div><div class="modal-rule-zh">不存在完美的记录。</div><div class="modal-rule-en">Do not chase a flawless log.</div></div>
+    <div class="modal-rule"><div class="modal-rule-no">规则 2</div><div class="modal-rule-zh">虚构记录不会创造时间。</div><div class="modal-rule-en">Never summon time with fabricated entries.</div></div>
+    <div class="modal-rule"><div class="modal-rule-no">规则 3</div><div class="modal-rule-zh">做时间的战友而非俘虏。</div><div class="modal-rule-en">Walk with time as a comrade, not a captive.</div></div>
+    <div class="modal-rule"><div class="modal-rule-no">规则 4</div><div class="modal-rule-zh">时间不代表成绩。</div><div class="modal-rule-en">Don't let time fool you into pride.</div></div>
+    <div class="modal-rule"><div class="modal-rule-no">规则 5</div><div class="modal-rule-zh">为每一个不必记录的日子干杯。</div><div class="modal-rule-en">Toast to the days you never had to record.</div></div>
+    <div class="modal-divider"></div>
+    <div class="modal-signature">Alan Zhu</div>
+  </div>
+</div>
+
+<script>
+const proto = document.getElementById('prototype');
+const compactBtn = document.getElementById('compactBtn');
+const expandBtn = document.getElementById('expandBtn');
+const darkToggle = document.getElementById('darkToggle');
+
+let isCompact = false, isDark = false, isMoss = false;
+let clickCount = 0, clickTimer = null;
+
+compactBtn.addEventListener('click', () => {
+  isCompact = true;
+  proto.classList.add('showing-compact');
+  document.querySelector('.sidebar').style.display = 'none';
+  document.querySelector('.content').style.display = 'none';
+  const cp = document.getElementById('compactPanel');
+  cp.style.display = 'flex';
+  cp.style.position = 'absolute';
+  cp.style.top = '50%';
+  cp.style.left = '50%';
+  cp.style.transform = 'translate(-50%, -50%)';
+});
+expandBtn.addEventListener('click', () => {
+  isCompact = false;
+  proto.classList.remove('showing-compact');
+  document.querySelector('.sidebar').style.display = '';
+  document.querySelector('.content').style.display = '';
+  const cp = document.getElementById('compactPanel');
+  cp.style.display = '';
+  cp.style.position = '';
+  cp.style.top = '';
+  cp.style.left = '';
+  cp.style.transform = '';
+});
+
+// Moss mode: 8 clicks within 2 seconds on Dark/Light button
+darkToggle.addEventListener('click', () => {
+  clickCount++;
+  if (clickCount === 1) {
+    clickTimer = setTimeout(() => { clickCount = 0; }, 2000);
+  }
+  if (clickCount >= 8) {
+    clearTimeout(clickTimer);
+    clickCount = 0;
+    isMoss = !isMoss;
+    const root = document.documentElement;
+    if (isMoss) {
+      isDark = false;
+      root.classList.remove('dark');
+      root.classList.add('moss');
+      document.querySelector('.topbar-title').textContent = 'MOSS_SYS :: ONLINE';
+      darkToggle.innerHTML = `<svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="#cc2200" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.341 6.484A10 10 0 0 1 10.266 21.85"/><path d="M3.659 17.516A10 10 0 0 1 13.74 2.152"/><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/></svg> EXIT MOSS`;
+      darkToggle.style.color = '#cc2200';
+      darkToggle.style.borderColor = '#cc2200';
+    } else {
+      root.classList.remove('moss');
+      document.querySelector('.topbar-title').textContent = 'Alangrapher — 760×620';
+      _updateDarkBtn();
+      darkToggle.style.color = '';
+      darkToggle.style.borderColor = '';
+    }
+    return;
+  }
+  if (isMoss) return;
+  isDark = !isDark;
+  if (isDark) {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+  _updateDarkBtn();
+});
+
+function _updateDarkBtn() {
+  if (isDark) {
+    darkToggle.innerHTML = `<svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg> Light`;
+  } else {
+    darkToggle.innerHTML = `<svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 5h4"/><path d="M20 3v4"/><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg> Dark`;
+  }
+}
+
+// Page switching
+document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    item.classList.add('active');
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + item.dataset.page).classList.add('active');
+  });
+});
+
+// Easter egg: click "code of timing" to open modal
+const modal = document.getElementById('easterEggModal');
+const trigger = document.getElementById('easterEggTrigger');
+
+trigger.addEventListener('click', () => {
+  modal.classList.add('show');
+});
+
+modal.addEventListener('click', (e) => {
+  if (e.target === modal) modal.classList.remove('show');
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && modal.classList.contains('show')) {
+    modal.classList.remove('show');
+  }
+});
+
+// ═══ Todo: inline add ═══
+function addTodo() {
+  const subjInput = document.getElementById('todoSubject');
+  const descInput = document.getElementById('todoDesc');
+  const subj = subjInput.value.trim();
+  if (!subj) return;
+  const desc = descInput.value.trim();
+  const list = document.querySelector('#page-todo .todo-list');
+  const item = document.createElement('div');
+  item.className = 'todo-item';
+  const s1 = document.createElement('span'); s1.textContent = subj; const safeSubj = s1.innerHTML;
+  const s2 = document.createElement('span'); s2.textContent = desc; const safeDesc = s2.innerHTML;
+  item.innerHTML = '<div class="todo-checkbox" onclick="toggleTodo(this)"></div>'+
+    '<div class="todo-item-info"><div class="todo-item-subject">'+safeSubj+'</div>'+
+    (safeDesc ? '<div class="todo-item-desc">'+safeDesc+'</div>' : '')+'</div>'+
+    '<span class="todo-start-btn" onclick="startTodoTimer(this)" title="Start timer"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></span>';
+  list.appendChild(item);
+  subjInput.value = '';
+  descInput.value = '';
+  updateTodoCounter();
+}
+function toggleTodo(cb) {
+  cb.closest('.todo-item').classList.toggle('done');
+  updateTodoCounter();
+}
+function startTodoTimer(el) {
+  const item = el.closest('.todo-item');
+  if (item.classList.contains('done')) return;
+  const subj = item.querySelector('.todo-item-subject').textContent.trim();
+  const descEl = item.querySelector('.todo-item-desc');
+  const desc = descEl ? descEl.textContent.trim() : '';
+
+  // Switch to Timer page
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelector('.nav-item[data-page="timer"]').classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-timer').classList.add('active');
+
+  // Fill first slot
+  const slot = document.querySelector('#page-timer .card');
+  const select = slot.querySelector('.form-select');
+  const input = slot.querySelector('.form-input');
+  const startBtn = slot.querySelector('.btn-primary');
+
+  // Try matching subject in dropdown; if not found, add it
+  let found = false;
+  if (select) {
+    for (let i = 0; i < select.options.length; i++) {
+      if (select.options[i].text === subj) { select.selectedIndex = i; found = true; break; }
+    }
+    if (!found && subj) {
+      const opt = document.createElement('option');
+      opt.textContent = subj;
+      select.appendChild(opt);
+      select.selectedIndex = select.options.length - 1;
+    }
+  }
+  if (input) input.value = desc;
+  // Update the slot display
+  const subjectLine = slot.querySelector('.timer-subject-line');
+  const badge = slot.querySelector('.badge');
+  if (subjectLine) subjectLine.textContent = subj + (desc ? ' — ' + desc : '');
+  if (badge) { badge.className = 'badge running'; badge.querySelector('.dot').style.background = 'var(--running)'; badge.innerHTML = '<span class="dot"></span> Running'; }
+  if (startBtn) { const txt = startBtn.textContent; /* visual feedback */ }
+}
+function updateTodoCounter() {
+  const all = document.querySelectorAll('#page-todo .todo-list .todo-item');
+  const done = document.querySelectorAll('#page-todo .todo-list .todo-item.done');
+  const pending = all.length - done.length;
+  document.querySelector('#page-todo .page-sub').textContent = pending + ' pending · ' + done.length + ' done';
+}
+
+// ═══ Records: add / edit / delete ═══
+
+function addRecord() {
+  const row = document.getElementById('recordsAddRow');
+  const body = document.getElementById('recordsBody');
+  const subj = row.querySelector('.records-add-subject').value;
+  const desc = row.querySelector('.records-add-desc').value.trim() || '—';
+  const start = row.querySelector('.records-add-start').value;
+  const end = row.querySelector('.records-add-end').value;
+  const dateField = document.getElementById('recordsDateField');
+  const date = dateField.value;
+  const dur = calcDur(start, end);
+
+  const tr = document.createElement('tr');
+  tr.setAttribute('data-date', date);
+  tr.setAttribute('data-subject', subj);
+  tr.setAttribute('data-desc', desc);
+  tr.setAttribute('data-start', start);
+  tr.setAttribute('data-end', end);
+  tr.setAttribute('data-dur', dur);
+  tr.innerHTML = `<td class="cell-date records-date-col">${date}</td><td class="cell-subj">${esc(subj)}</td><td class="cell-desc">${esc(desc)}</td><td class="cell-start">${start}</td><td class="cell-end">${end}</td><td class="cell-dur" style="text-align:right">${dur}</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td>`;
+  body.appendChild(tr);
+  row.querySelector('.records-add-desc').value = '';
+  updateRecordsCount();
+}
+
+function editRecord(span) {
+  const tr = span.closest('tr');
+  if (tr.classList.contains('records-editing')) return;
+  tr.classList.add('records-editing');
+  const cells = tr.querySelectorAll('td.cell-date, td.cell-subj, td.cell-desc, td.cell-start, td.cell-end, td.cell-dur');
+  const oldValues = Array.from(cells).map(c => c.textContent.trim());
+
+  // Date → date input (cells[0])
+  cells[0].innerHTML = `<input type="date" value="${oldValues[0]}">`;
+  // Subject → select (cells[1])
+  const subjects = ['Code Review','Design System','Documentation','Meeting','Research'];
+  cells[1].innerHTML = `<select>${subjects.map(s => `<option${s === oldValues[1] ? ' selected' : ''}>${s}</option>`).join('')}</select>`;
+  // Description → text (cells[2])
+  cells[2].innerHTML = `<input type="text" value="${escAttr(oldValues[2])}">`;
+  // Start → time (cells[3])
+  cells[3].innerHTML = `<input type="time" value="${oldValues[3]}">`;
+  // End → time (cells[4])
+  cells[4].innerHTML = `<input type="time" value="${oldValues[4]}">`;
+  // Duration → text (cells[5])
+  cells[5].innerHTML = `<input type="text" value="${oldValues[5]}" style="text-align:right">`;
+
+  // Actions → ✓ / ✕
+  const actionsTd = tr.querySelector('td:last-child');
+  actionsTd.innerHTML = `<span class="edit-actions-inline"><span class="act save" onclick="saveEdit(this)" title="Save">✓</span><span class="act cancel" onclick="cancelEdit(this)" title="Cancel">✕</span></span>`;
+}
+
+function saveEdit(span) {
+  const tr = span.closest('tr');
+  const subj = tr.querySelector('td.cell-subj select').value;
+  const date = tr.querySelector('td.cell-date input').value;
+  const desc = tr.querySelector('td.cell-desc input').value;
+  const start = tr.querySelector('td.cell-start input').value;
+  const end = tr.querySelector('td.cell-end input').value;
+  const dur = tr.querySelector('td.cell-dur input').value;
+
+  tr.setAttribute('data-date', date);
+  tr.setAttribute('data-subject', subj);
+  tr.setAttribute('data-desc', desc);
+  tr.setAttribute('data-start', start);
+  tr.setAttribute('data-end', end);
+  tr.setAttribute('data-dur', dur);
+
+  tr.querySelector('td.cell-subj').textContent = subj;
+  tr.querySelector('td.cell-date').textContent = date;
+  tr.querySelector('td.cell-desc').textContent = desc;
+  tr.querySelector('td.cell-start').textContent = start;
+  tr.querySelector('td.cell-end').textContent = end;
+  tr.querySelector('td.cell-dur').textContent = dur;
+
+  const actionsTd = tr.querySelector('td:last-child');
+  actionsTd.innerHTML = `<span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span>`;
+  tr.classList.remove('records-editing');
+}
+
+function cancelEdit(span) {
+  const tr = span.closest('tr');
+  tr.querySelector('td.cell-subj').textContent = tr.dataset.subject;
+  tr.querySelector('td.cell-date').textContent = tr.dataset.date;
+  tr.querySelector('td.cell-desc').textContent = tr.dataset.desc;
+  tr.querySelector('td.cell-start').textContent = tr.dataset.start;
+  tr.querySelector('td.cell-end').textContent = tr.dataset.end;
+  tr.querySelector('td.cell-dur').textContent = tr.dataset.dur;
+
+  const actionsTd = tr.querySelector('td:last-child');
+  actionsTd.innerHTML = `<span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span>`;
+  tr.classList.remove('records-editing');
+}
+
+function delRecord(span) {
+  span.closest('tr').remove();
+  updateRecordsCount();
+}
+
+function updateRecordsCount() {
+  const n = document.getElementById('recordsBody').children.length;
+  const el = document.getElementById('recordsCount');
+  if (el) el.textContent = n;
+}
+
+function calcDur(start, end) {
+  if (!start || !end) return '—';
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  const m = (eh * 60 + em) - (sh * 60 + sm);
+  const h = Math.floor(m / 60), rm = m % 60;
+  return h > 0 ? `${h}h ${rm}m` : `${rm}m`;
+}
+
+function esc(s) { return s.replace(/</g,'&lt;'); }
+function escAttr(s) { return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function setRecordsFilter(filter) {
+  document.querySelectorAll('#page-records .filter-chips .chip').forEach(c => c.classList.remove('active'));
+  const chips = document.querySelectorAll('#page-records .filter-chips .chip');
+  let targetChip = null;
+  chips.forEach(c => { if (c.textContent.trim().startsWith(filter === 'Today' ? 'Today' : filter === 'Week' ? 'This Week' : filter === 'Month' ? 'This Month' : 'All')) targetChip = c; });
+  if (targetChip) targetChip.classList.add('active');
+  const dateField = document.getElementById('recordsDateField');
+  if (dateField) {
+    dateField.style.display = (filter === 'Today') ? 'none' : '';
+    if (filter === 'Today') {
+      const today = new Date().toISOString().slice(0, 10);
+      dateField.value = today;
+    }
+  }
+  // Toggle date column in table
+  const scrollWrap = document.querySelector('#page-records .records-scroll-wrap');
+  if (scrollWrap) {
+    if (filter === 'Today') scrollWrap.classList.remove('showing-dates');
+    else scrollWrap.classList.add('showing-dates');
+  }
+}
+
+// ═══ Subjects: inline edit ═══
+
+function editSubject(span) {
+  const row = span.closest('.subject-row');
+  if (row.classList.contains('editing')) return;
+  row.classList.add('editing');
+  const nameEl = row.querySelector('.subject-name');
+  const oldName = nameEl.textContent.trim();
+  nameEl.innerHTML = `<input type="text" value="${escAttr(oldName)}" style="border:none;background:transparent;font-size:13px;color:var(--text);font-family:inherit;padding:2px 4px;border-bottom:1px solid var(--accent);outline:none;flex:1;">`;
+  const actions = row.querySelector('.subject-actions');
+  actions.innerHTML = `<span class="act save" onclick="saveSubject(this)" style="color:var(--accent);">✓</span><span class="act cancel" onclick="cancelSubject(this)">✕</span>`;
+}
+
+function saveSubject(span) {
+  const row = span.closest('.subject-row');
+  const input = row.querySelector('.subject-name input');
+  if (!input) return;
+  const newName = input.value.trim();
+  if (newName) {
+    row.querySelector('.subject-name').textContent = newName;
+  }
+  restoreSubjectActions(row);
+  row.classList.remove('editing');
+}
+
+function cancelSubject(span) {
+  const row = span.closest('.subject-row');
+  restoreSubjectActions(row);
+  row.classList.remove('editing');
+}
+
+function restoreSubjectActions(row) {
+  const actions = row.querySelector('.subject-actions');
+  actions.innerHTML = `<span class="act" onclick="editSubject(this)">✎</span><span class="act" onclick="delSubject(this)">🗑</span>`;
+}
+
+function delSubject(span) {
+  span.closest('.subject-row').remove();
+  updateSubjectsCount();
+}
+
+function addSubject() {
+  const row = document.querySelector('#page-subjects .subject-row:first-child').parentElement.previousElementSibling;
+  const inp = row.querySelector('input');
+  const v = inp.value.trim();
+  if (!v) return;
+  const dot = row.querySelector('.subject-dot');
+  const color = dot.style.background;
+  const list = row.nextElementSibling;
+  const newRow = document.createElement('div');
+  newRow.className = 'subject-row';
+  newRow.innerHTML = `<span class="subject-dot" style="background:${color}"></span><span class="subject-name">${esc(v)}</span><span class="subject-actions"><span class="act" onclick="editSubject(this)">✎</span><span class="act" onclick="delSubject(this)">🗑</span></span>`;
+  list.appendChild(newRow);
+  inp.value = '';
+  updateSubjectsCount();
+}
+
+function updateSubjectsCount() {
+  const n = document.querySelectorAll('#page-subjects .subjects-list .subject-row').length;
+  const sub = document.querySelector('#page-subjects .page-sub');
+  if (sub) sub.textContent = `${n} subjects — manage your activity categories`;
+}
+</script>
+
+
+<!-- Dynamic JS bridge — replaces prototype's static JS -->
+<script>
+// ═══ pywebview bridge ═══════════════════════════════════════
+const api = window.pywebview ? window.pywebview.api : null;
+
+function ready(fn) {
+    if (api) { fn(); return; }
+    window.addEventListener('pywebviewready', fn);
+}
+
+// ═══ Global state mirror ═══════════════════════════════════
+let _slots = [];
+let _subjects = [];
+let _todos = [];
+let _recordsFilter = 'today';
+
+// ═══ Init ══════════════════════════════════════════════════
+ready(async () => {
+    await loadSubjects();
+    await refreshAll();
+    setInterval(refreshAll, 500);
+});
+
+async function refreshAll() {
+    if (!api) return;
+    await refreshSlots();
+    await refreshTodos();
+    await refreshRecords();
+}
+
+// ═══ Slots / Timer ═════════════════════════════════════════
+async function refreshSlots() {
+    _slots = await api.get_all_slots();
+    _subjects = await api.get_subjects();
+    renderTimerPage();
+}
+
+function renderTimerPage() {
+    const container = document.querySelector('#page-timer');
+    if (!container) return;
+
+    // Rebuild cards
+    const oldCards = container.querySelectorAll('.card');
+    oldCards.forEach(c => c.remove());
+
+    _slots.forEach((slot, i) => {
+        const card = buildTimerCard(slot, i);
+        // Insert before tile-row
+        const tileRow = container.querySelector('.tile-row');
+        if (tileRow) {
+            container.insertBefore(card, tileRow);
+        } else {
+            container.appendChild(card);
+        }
+    });
+}
+
+function buildTimerCard(slot, index) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.slot = index;
+
+    const subjName = _subjects.find(s => s.id === slot.subject_id);
+    const badgeClass = slot.status === 'running' ? 'running' : slot.status === 'paused' ? 'paused' : 'idle';
+    const badgeText = slot.status.charAt(0).toUpperCase() + slot.status.slice(1);
+
+    const showActions = slot.status !== 'idle';
+    const primaryLabel = slot.status === 'running' ? 'Pause' : slot.status === 'paused' ? 'Resume' : 'Start';
+    const primaryAction = slot.status === 'running' ? `pauseSlot(${index})` : `startSlot(${index})`;
+
+    // Build subject options
+    let subjOpts = '<option>— Select subject —</option>';
+    _subjects.forEach(s => {
+        const sel = s.id === slot.subject_id ? ' selected' : '';
+        subjOpts += `<option value="${s.id}"${sel}>${s.name}</option>`;
+    });
+
+    card.innerHTML = `
+        <div class="slot-header">
+            <span class="slot-label">Timer ${index + 1}</span>
+            <span class="badge ${badgeClass}"><span class="dot"></span> ${badgeText}</span>
+            <span class="slot-subject">${subjName ? subjName.name : '—'}</span>
+            <span style="color:var(--muted);cursor:pointer;font-size:13px;" onclick="toggleCollapse(this)">
+                <svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </span>
+            ${_slots.length > 1 ? `<span style="color:var(--muted);cursor:pointer;font-size:11px;" onclick="removeSlot(${index})">
+                <svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </span>` : ''}
+            ${_slots.length < 5 ? `<button class="add-slot-btn" title="Add timer slot (max 5)" onclick="addSlot()">
+                <svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            </button>` : ''}
+        </div>
+        <div class="timer-clock">${slot.display_time}</div>
+        <div class="timer-subject-line">${subjName ? subjName.name : '—'}</div>
+        <div class="form-row"><div class="form-label">Subject</div>
+            <div class="select-wrapper">
+                <select class="form-select" onchange="setSlotSubject(${index}, this.value)">${subjOpts}</select>
+            </div>
+        </div>
+        <div class="form-row"><div class="form-label">Description (optional)</div>
+            <input class="form-input" placeholder="What are you working on?" value="${slot.description || ''}"
+                onchange="setSlotDesc(${index}, this.value)">
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-primary" style="flex:1;" onclick="${primaryAction}">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    ${slot.status === 'running'
+                        ? '<rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/>'
+                        : '<path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/>'}
+                </svg>${primaryLabel}</button>
+            <button class="btn btn-secondary" style="flex:1;" onclick="archiveSlot(${index})">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 15h18"/><path d="m15 8-3 3-3-3"/>
+                </svg>Archive</button>
+        </div>
+    `;
+    return card;
+}
+
+async function startSlot(index) {
+    const sel = document.querySelector(`.card[data-slot="${index}"] .form-select`);
+    const sid = sel ? parseInt(sel.value) || null : null;
+    await api.start_slot(index, sid);
+    refreshAll();
+}
+
+async function pauseSlot(index) {
+    await api.pause_slot(index);
+    refreshAll();
+}
+
+async function archiveSlot(index) {
+    const sel = document.querySelector(`.card[data-slot="${index}"] .form-select`);
+    const inp = document.querySelector(`.card[data-slot="${index}"] .form-input`);
+    const sid = sel ? parseInt(sel.value) || null : null;
+    const desc = inp ? inp.value : '';
+    await api.archive_slot(index, sid, desc);
+    refreshAll();
+}
+
+async function addSlot() {
+    await api.add_slot();
+    refreshAll();
+}
+
+async function removeSlot(index) {
+    await api.remove_slot(index);
+    refreshAll();
+}
+
+function setSlotSubject(index, value) {
+    // Handled by start_slot / archive_slot
+}
+
+function setSlotDesc(index, value) {
+    api.set_description(index, value);
+}
+
+function toggleCollapse(el) {
+    const card = el.closest('.card');
+    const clock = card.querySelector('.timer-clock');
+    const subjLine = card.querySelector('.timer-subject-line');
+    const rows = card.querySelectorAll('.form-row, .btn-row');
+    const hidden = clock.style.display === 'none';
+    clock.style.display = hidden ? '' : 'none';
+    if (subjLine) subjLine.style.display = hidden ? '' : 'none';
+    rows.forEach(r => r.style.display = hidden ? '' : 'none');
+    el.querySelector('svg').innerHTML = hidden
+        ? '<path d="m6 9 6 6 6-6"/>'
+        : '<path d="m18 15-6-6-6 6"/>';
+}
+
+// ═══ Todos ═══════════════════════════════════════════════
+async function refreshTodos() {
+    _todos = await api.get_todos();
+    renderTodos();
+}
+
+function renderTodos() {
+    const list = document.querySelector('#page-todo .todo-list');
+    if (!list) return;
+    // Remove old items (keep the inline add row)
+    const oldItems = list.querySelectorAll('.todo-item');
+    oldItems.forEach(el => el.remove());
+
+    _todos.forEach(todo => {
+        const item = document.createElement('div');
+        item.className = 'todo-item' + (todo.status === 'done' ? ' done' : '');
+        item.dataset.id = todo.id;
+        item.innerHTML = `
+            <div class="todo-checkbox" onclick="toggleTodo(${todo.id})"></div>
+            <div class="todo-item-info">
+                <div class="todo-item-subject">${escapeHTML(todo.subject)}</div>
+                ${todo.description ? `<div class="todo-item-desc">${escapeHTML(todo.description)}</div>` : ''}
+            </div>
+            <span class="todo-start-btn" onclick="startTodoTimer(${todo.id})" title="Start timer">
+                <svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/>
+                </svg>
+            </span>`;
+        list.appendChild(item);
+    });
+    updateTodoCounter();
+}
+
+// Override prototype's addTodo
+async function addTodo() {
+    if (!api) return;
+    const subjInput = document.getElementById('todoSubject');
+    const descInput = document.getElementById('todoDesc');
+    const subj = subjInput.value.trim();
+    if (!subj) return;
+    await api.add_todo(subj, descInput.value.trim());
+    subjInput.value = '';
+    descInput.value = '';
+    refreshTodos();
+}
+window.addTodo = addTodo;
+
+async function toggleTodo(id) {
+    await api.toggle_todo(id);
+    refreshTodos();
+}
+
+function updateTodoCounter() {
+    const pending = _todos.filter(t => t.status === 'pending').length;
+    const done = _todos.filter(t => t.status === 'done').length;
+    const counter = document.getElementById('todoCounter');
+    if (counter) counter.textContent = `${pending} pending · ${done} done`;
+}
+
+async function startTodoTimer(id) {
+    const todo = _todos.find(t => t.id === id);
+    if (!todo || todo.status === 'done') return;
+    // Switch to Timer page
+    switchPage('timer');
+    // Fill first idle slot
+    const idleIdx = _slots.findIndex(s => s.status === 'idle');
+    if (idleIdx >= 0) {
+        await api.set_description(idleIdx, todo.description || todo.subject);
+        await api.start_slot(idleIdx, todo.subject_id || null);
+        refreshAll();
+    }
+}
+
+// ═══ Records ═════════════════════════════════════════════
+async function refreshRecords() {
+    const records = await api.get_records(_recordsFilter);
+    renderRecords(records);
+}
+
+function renderRecords(records) {
+    const tbody = document.getElementById('recordsBody');
+    if (!tbody) return;
+    tbody.innerHTML = records.map(r => `
+        <tr data-id="${r.id}" data-subject="${escapeAttr(r.subject_name)}" data-desc="${escapeAttr(r.description)}"
+            data-start="${r.start}" data-end="${r.end}" data-dur="${r.duration}" data-date="${r.date}"${r.date === todayIso() ? ' ondblclick="fillRecordToSlot(' + r.id + ')" title="Double-click to load into timer"' : ''}>
+            <td class="records-date-col cell-date">${r.date}</td>
+            <td class="cell-subj">${escapeHTML(r.subject_name)}</td>
+            <td class="cell-desc">${escapeHTML(r.description) || '—'}</td>
+            <td class="cell-start">${r.start}</td>
+            <td class="cell-end">${r.end}</td>
+            <td class="cell-dur">${r.duration}</td>
+            <td><span class="records-actions">
+                <span class="act" onclick="editRecord(this)">✎</span>
+                <span class="act del" onclick="delRecord(this)">🗑</span>
+            </span></td>
+        </tr>
+    `).join('');
+}
+
+// Override prototype's setRecordsFilter
+async function setRecordsFilter(filter) {
+    _recordsFilter = filter === 'Today' ? 'today' : filter === 'Week' ? 'week' : 'all';
+    document.querySelectorAll('#page-records .filter-chips .chip').forEach(c => c.classList.remove('active'));
+    const chips = document.querySelectorAll('#page-records .filter-chips .chip');
+    chips.forEach(c => {
+        const t = c.textContent.trim();
+        if ((filter === 'Today' && t.startsWith('Today')) ||
+            (filter === 'Week' && t.startsWith('This Week')) ||
+            (filter === 'Month' && t.startsWith('This Month')) ||
+            (filter === 'All' && t === 'All')) c.classList.add('active');
+    });
+    const dateField = document.getElementById('recordsDateField');
+    if (dateField) {
+        dateField.style.display = (filter === 'Today') ? 'none' : '';
+        if (filter === 'Today') dateField.value = new Date().toISOString().slice(0, 10);
+    }
+    const scrollWrap = document.querySelector('#page-records .records-scroll-wrap');
+    if (scrollWrap) {
+        if (filter === 'Today') scrollWrap.classList.remove('showing-dates');
+        else scrollWrap.classList.add('showing-dates');
+    }
+    refreshRecords();
+}
+window.setRecordsFilter = setRecordsFilter;
+
+async function delRecord(span) {
+    const tr = span.closest('tr');
+    const id = parseInt(tr.dataset.id);
+    if (id) await api.delete_record(id);
+    refreshRecords();
+}
+
+// ═══ Subjects ═══════════════════════════════════════════
+async function addSubject() {
+    if (!api) return;
+    const row = document.querySelector('#page-subjects .subject-row:first-child');
+    const inp = row ? row.parentElement.previousElementSibling.querySelector('input') : null;
+    if (!inp) return;
+    const name = inp.value.trim();
+    if (!name) return;
+    await api.add_subject(name);
+    inp.value = '';
+    refreshSubjects();
+}
+window.addSubject = addSubject;
+
+async function refreshSubjects() {
+    const subjects = await api.get_subjects();
+    renderSubjects(subjects);
+}
+
+function renderSubjects(subjects) {
+    const list = document.querySelector('#page-subjects .subjects-list');
+    if (!list) return;
+    const oldRows = list.querySelectorAll('.subject-row');
+    oldRows.forEach(r => r.remove());
+    subjects.forEach(s => {
+        const row = document.createElement('div');
+        row.className = 'subject-row';
+        row.innerHTML = `
+            <span class="subject-dot" style="background:${s.color}"></span>
+            <span class="subject-name">${escapeHTML(s.name)}</span>
+            <span class="subject-actions">
+                <span class="act" onclick="editSubject(this)">✎</span>
+                <span class="act" onclick="delSubject(this)">🗑</span>
+            </span>`;
+        list.appendChild(row);
+    });
+    updateSubjectsCount();
+}
+
+function updateSubjectsCount() {
+    const n = document.querySelectorAll('#page-subjects .subjects-list .subject-row').length;
+    const sub = document.querySelector('#page-subjects .page-sub');
+    if (sub) sub.textContent = `${n} subjects — manage your activity categories`;
+}
+
+async function delSubject(span) {
+    // Find subject ID by name
+    const row = span.closest('.subject-row');
+    const name = row.querySelector('.subject-name').textContent.trim();
+    const subj = _subjects.find(s => s.name === name);
+    if (subj) await api.delete_subject(subj.id);
+    refreshSubjects();
+}
+
+// ═══ Page switching ═════════════════════════════════════
+function switchPage(name) {
+    document.querySelectorAll('.nav-item[data-page]').forEach(n => n.classList.remove('active'));
+    document.querySelector(`.nav-item[data-page="${name}"]`).classList.add('active');
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+}
+
+document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+    item.addEventListener('click', () => switchPage(item.dataset.page));
+});
+
+// ═══ Theme toggle ═══════════════════════════════════════
+const proto = document.getElementById('prototype');
+const compactBtn = document.getElementById('compactBtn');
+const expandBtn = document.getElementById('expandBtn');
+const darkToggle = document.getElementById('darkToggle');
+
+let isCompact = false, isDark = false, isMoss = false;
+let clickCount = 0, clickTimer = null;
+
+compactBtn.addEventListener('click', () => {
+    isCompact = true;
+    proto.classList.add('showing-compact');
+    document.querySelector('.sidebar').style.display = 'none';
+    document.querySelector('.content').style.display = 'none';
+    const cp = document.getElementById('compactPanel');
+    cp.style.display = 'flex';
+    cp.style.position = 'absolute';
+    cp.style.top = '50%';
+    cp.style.left = '50%';
+    cp.style.transform = 'translate(-50%, -50%)';
+    // Resize window to compact panel size
+    if (api) api.resize_window(324, 620);
+});
+
+expandBtn.addEventListener('click', () => {
+    isCompact = false;
+    proto.classList.remove('showing-compact');
+    document.querySelector('.sidebar').style.display = '';
+    document.querySelector('.content').style.display = '';
+    const cp = document.getElementById('compactPanel');
+    cp.style.display = '';
+    cp.style.position = '';
+    cp.style.top = '';
+    cp.style.left = '';
+    cp.style.transform = '';
+    // Restore full window size
+    if (api) api.resize_window(760, 620);
+});
+
+darkToggle.addEventListener('click', () => {
+    clickCount++;
+    if (clickCount === 1) {
+        clickTimer = setTimeout(() => { clickCount = 0; }, 2000);
+    }
+    if (clickCount >= 8) {
+        clearTimeout(clickTimer);
+        clickCount = 0;
+        isMoss = !isMoss;
+        const root = document.documentElement;
+        if (isMoss) {
+            isDark = false;
+            root.classList.remove('dark');
+            root.classList.add('moss');
+            darkToggle.innerHTML = `<svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="#cc2200" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.341 6.484A10 10 0 0 1 10.266 21.85"/><path d="M3.659 17.516A10 10 0 0 1 13.74 2.152"/><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/></svg> EXIT MOSS`;
+            darkToggle.style.color = '#cc2200';
+            darkToggle.style.borderColor = '#cc2200';
+        } else {
+            root.classList.remove('moss');
+            _updateDarkBtn();
+            darkToggle.style.color = '';
+            darkToggle.style.borderColor = '';
+        }
+        return;
+    }
+    if (isMoss) return;
+    isDark = !isDark;
+    if (isDark) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+    _updateDarkBtn();
+});
+
+function _updateDarkBtn() {
+    if (isDark) {
+        darkToggle.innerHTML = `<svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg> Light`;
+    } else {
+        darkToggle.innerHTML = `<svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 5h4"/><path d="M20 3v4"/><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg> Dark`;
+    }
+}
+
+// ═══ Code of Timing modal ═══════════════════════════════
+const modal = document.getElementById('easterEggModal');
+const trigger = document.getElementById('easterEggTrigger');
+trigger.addEventListener('click', () => modal.classList.add('show'));
+modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('show'); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('show')) modal.classList.remove('show'); });
+
+// ═══ Double-click record → timer ════════════════════════
+function todayIso() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+async function fillRecordToSlot(id) {
+    if (!api) return;
+    // Only today's records can be loaded into timer
+    const todayRecs = await api.get_records('today');
+    const record = todayRecs.find(r => Number(r.id) === Number(id));
+    if (!record) return;
+    const idleIdx = _slots.findIndex(s => s.status === 'idle');
+    if (idleIdx < 0) return;
+    const subj = _subjects.find(s => s.name === record.subject_name);
+    await api.set_resume_record(idleIdx, record.id);
+    if (subj) await api.set_description(idleIdx, record.description || '');
+    switchPage('timer');
+    refreshAll();
+}
+
+// ═══ Helpers ════════════════════════════════════════════
+function escapeHTML(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escapeAttr(s) {
+    return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+// ═══ Records: inline edit (kept from prototype) ════════
+function editRecord(span) {
+    const tr = span.closest('tr');
+    if (tr.classList.contains('records-editing')) return;
+    tr.classList.add('records-editing');
+    tr.dataset.subject = tr.querySelector('.cell-subj').textContent;
+    tr.dataset.desc = tr.querySelector('.cell-desc').textContent;
+    tr.dataset.start = tr.querySelector('.cell-start').textContent;
+    tr.dataset.end = tr.querySelector('.cell-end').textContent;
+    tr.dataset.dur = tr.querySelector('.cell-dur').textContent;
+    tr.dataset.date = tr.querySelector('.cell-date') ? tr.querySelector('.cell-date').textContent : '';
+
+    const subjOpts = _subjects.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+    tr.querySelector('.cell-subj').innerHTML = `<select>${subjOpts}</select>`;
+    tr.querySelector('.cell-desc').innerHTML = `<input type="text" value="${escapeAttr(tr.dataset.desc)}">`;
+    tr.querySelector('.cell-start').innerHTML = `<input type="text" value="${tr.dataset.start}">`;
+    tr.querySelector('.cell-end').innerHTML = `<input type="text" value="${tr.dataset.end}">`;
+    tr.querySelector('.cell-dur').textContent = tr.dataset.dur;
+    const actionsTd = tr.querySelector('td:last-child');
+    actionsTd.innerHTML = `<span class="edit-actions-inline"><span class="act save" onclick="saveRecordEdit(this)">✓</span><span class="act cancel" onclick="cancelEdit(this)">✕</span></span>`;
+}
+
+async function saveRecordEdit(span) {
+    const tr = span.closest('tr');
+    const id = parseInt(tr.dataset.id);
+    const desc = tr.querySelector('.cell-desc input').value;
+    const start = tr.querySelector('.cell-start input').value;
+    const end = tr.querySelector('.cell-end input').value;
+    if (id && api) await api.update_record(id, description: desc, start_time: start, end_time: end);
+    refreshRecords();
+}
+
+function cancelEdit(span) {
+    const tr = span.closest('tr');
+    tr.querySelector('.cell-subj').textContent = tr.dataset.subject;
+    tr.querySelector('.cell-desc').textContent = tr.dataset.desc;
+    tr.querySelector('.cell-start').textContent = tr.dataset.start;
+    tr.querySelector('.cell-end').textContent = tr.dataset.end;
+    tr.querySelector('.cell-dur').textContent = tr.dataset.dur;
+    const actionsTd = tr.querySelector('td:last-child');
+    actionsTd.innerHTML = `<span class="records-actions"><span class="act" onclick="editRecord(this)">✎</span><span class="act del" onclick="delRecord(this)">🗑</span></span>`;
+    tr.classList.remove('records-editing');
+}
+
+// ═══ Subjects: inline edit (kept from prototype) ═══════
+function editSubject(span) {
+    const row = span.closest('.subject-row');
+    if (row.classList.contains('editing')) return;
+    row.classList.add('editing');
+    const nameEl = row.querySelector('.subject-name');
+    const oldName = nameEl.textContent.trim();
+    nameEl.innerHTML = `<input type="text" value="${escapeAttr(oldName)}" style="border:none;background:transparent;font-size:13px;color:var(--text);font-family:inherit;padding:2px 4px;border-bottom:1px solid var(--accent);outline:none;flex:1;">`;
+    const actions = row.querySelector('.subject-actions');
+    actions.innerHTML = `<span class="act save" onclick="saveSubject(this)">✓</span><span class="act cancel" onclick="cancelSubject(this)">✕</span>`;
+}
+
+async function saveSubject(span) {
+    const row = span.closest('.subject-row');
+    const input = row.querySelector('.subject-name input');
+    if (!input) return;
+    const newName = input.value.trim();
+    const oldName = row.querySelector('.subject-name').textContent.trim() || row.dataset.oldName || '';
+    if (newName && api) {
+        const subj = _subjects.find(s => s.name === oldName);
+        if (subj) await api.update_subject(subj.id, newName, subj.color);
+        refreshSubjects();
+    }
+}
+
+function cancelSubject(span) {
+    const row = span.closest('.subject-row');
+    restoreSubjectActions(row);
+    row.classList.remove('editing');
+}
+
+function restoreSubjectActions(row) {
+    const actions = row.querySelector('.subject-actions');
+    actions.innerHTML = `<span class="act" onclick="editSubject(this)">✎</span><span class="act" onclick="delSubject(this)">🗑</span>`;
+}
+
+// ═══ Records: manual add ═══════════════════════════════
+async function addRecord() {
+    if (!api) return;
+    const dateField = document.getElementById('recordsDateField');
+    const subjField = document.getElementById('recordsSubject');
+    const descField = document.getElementById('recordsDesc');
+    const startField = document.getElementById('recordsStart');
+    const endField = document.getElementById('recordsEnd');
+
+    const desc = descField ? descField.value : '';
+    const start = startField ? startField.value : '';
+    const end = endField ? endField.value : '';
+    const subjName = subjField ? subjField.value : '';
+    const subj = _subjects.find(s => s.name === subjName);
+    const sid = subj ? subj.id : null;
+
+    await api.add_record(sid || 1, desc, start, end);
+    if (descField) descField.value = '';
+    if (startField) startField.value = '';
+    if (endField) endField.value = '';
+    refreshRecords();
+}
+
+// ═══ Close button — minimize to tray (Windows) ═══
+const closeBtn = document.getElementById('closeBtn');
+if (closeBtn) {
+    closeBtn.addEventListener('click', async () => {
+        if (!api) return;
+        await api.hide_window();
+    });
+}
+</script>
+</body>
+</html>
