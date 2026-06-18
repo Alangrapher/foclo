@@ -80,20 +80,20 @@ function whenReady(fn) {
   }
 }
 
-whenReady(async () => {
-  try {
-    await loadAll();
-  } catch (e) {
-    console.error('Failed to load app state:', e);
-  }
-  startClockInterval();
-});
-
 document.addEventListener('DOMContentLoaded', () => {
   restoreUiPreferences();
   initializeDynamicDates();
   bindStaticControls();
-  if (!pyApi) renderAll();
+  // Load data when pywebview API is ready, then render.
+  // Must happen after DOMContentLoaded so renderAll() can find DOM elements.
+  whenReady(async () => {
+    try {
+      await loadAll();
+    } catch (e) {
+      console.error('Failed to load app state:', e);
+    }
+    startClockInterval();
+  });
 });
 
 window.addEventListener('beforeunload', () => {
