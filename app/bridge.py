@@ -18,7 +18,7 @@ class Api:
     def __init__(self, window=None, backup_service: BackupService | None = None):
         self.window = window
         self._backup = backup_service
-        default_slots = int(get_setting("default_slots", "3"))
+        default_slots = int(get_setting("default_slots", "1"))
         self.engine = TimerEngine(num_slots=default_slots)
 
     # ── Window ──────────────────────────────────────────
