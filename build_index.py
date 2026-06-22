@@ -195,24 +195,60 @@ function buildTimerCard(slot, index) {{
 }}
 
 async function startSlot(index) {{
-    const sel = document.querySelector(`.card[data-slot="${{index}}"] .form-select`);
+    if (_slots[index] && _slots[index].pendingAction) return;
+    if (_slots[index]) _slots[index].pendingAction = true;
+    const card = document.querySelector(`.card[data-slot="${{index}}"] .form-select`);
+    const sel = card;
+    const btn = card ? card.closest('.card').querySelector('.btn-primary') : null;
+    if (btn) {{
+        btn.disabled = true;
+        btn.childNodes.forEach(c => {{ if (c.nodeType === 3) c.textContent = 'Working...'; }});
+    }}
     const sid = sel ? parseInt(sel.value) || null : null;
-    await api.start_slot(index, sid);
-    refreshAll();
+    try {{
+        await api.start_slot(index, sid);
+    }} finally {{
+        if (_slots[index]) _slots[index].pendingAction = false;
+        refreshAll();
+    }}
 }}
 
 async function pauseSlot(index) {{
-    await api.pause_slot(index);
-    refreshAll();
+    if (_slots[index] && _slots[index].pendingAction) return;
+    if (_slots[index]) _slots[index].pendingAction = true;
+    const card = document.querySelector(`.card[data-slot="${{index}}"]`);
+    const btn = card ? card.querySelector('.btn-primary') : null;
+    if (btn) {{
+        btn.disabled = true;
+        btn.childNodes.forEach(c => {{ if (c.nodeType === 3) c.textContent = 'Working...'; }});
+    }}
+    try {{
+        await api.pause_slot(index);
+    }} finally {{
+        if (_slots[index]) _slots[index].pendingAction = false;
+        refreshAll();
+    }}
 }}
 
 async function archiveSlot(index) {{
-    const sel = document.querySelector(`.card[data-slot="${{index}}"] .form-select`);
-    const inp = document.querySelector(`.card[data-slot="${{index}}"] .form-input`);
-    const sid = sel ? parseInt(sel.value) || null : null;
-    const desc = inp ? inp.value : '';
-    await api.archive_slot(index, sid, desc);
-    refreshAll();
+    if (_slots[index] && _slots[index].pendingAction) return;
+    if (_slots[index]) _slots[index].pendingAction = true;
+    const card = document.querySelector(`.card[data-slot="${{index}}"]`);
+    const btn = card ? card.querySelector('.btn-secondary') : null;
+    if (btn) {{
+        btn.disabled = true;
+        btn.childNodes.forEach(c => {{ if (c.nodeType === 3) c.textContent = 'Working...'; }});
+    }}
+    try {{
+        const sel = card ? card.querySelector('.form-select') : null;
+        const inp = card ? card.querySelector('.form-input') : null;
+        const sid = sel ? parseInt(sel.value) || null : null;
+        const desc = inp ? inp.value : '';
+        await api.archive_slot(index, sid, desc);
+    }} finally {{
+        if (_slots[index]) _slots[index].pendingAction = false;
+        refreshAll();
+    }}
 }}
 
 async function addSlot() {{

@@ -618,12 +618,12 @@ html.dark .window { border-color: #30363D; box-shadow: 0 12px 48px rgba(0,0,0,0.
         <!-- Inline add form row -->
         <div class="records-add-row" id="recordsAddRow">
           <input type="date" id="recordsDateField" class="records-add-date" value="2026-06-12" style="flex:0 0 110px; border-bottom-style:solid; display:none;">
-          <select class="records-add-subject" style="flex:0.7;">
+          <select class="records-add-subject" id="recordsSubject" style="flex:0.7;">
             <option>Code Review</option><option>Design System</option><option>Documentation</option><option>Meeting</option><option>Research</option>
           </select>
-          <input type="text" class="records-add-desc" placeholder="Description" style="flex:1.3;">
-          <input type="time" class="records-add-start" value="09:00">
-          <input type="time" class="records-add-end" value="10:00">
+          <input type="text" class="records-add-desc" id="recordsDesc" placeholder="Description" style="flex:1.3;">
+          <input type="time" class="records-add-start" id="recordsStart" value="09:00">
+          <input type="time" class="records-add-end" id="recordsEnd" value="10:00">
           <button class="confirm-btn" onclick="addRecord()">✓</button>
         </div>
         <div class="records-scroll-wrap">
@@ -1306,24 +1306,60 @@ function buildTimerCard(slot, index) {
 }
 
 async function startSlot(index) {
-    const sel = document.querySelector(`.card[data-slot="${index}"] .form-select`);
+    if (_slots[index] && _slots[index].pendingAction) return;
+    if (_slots[index]) _slots[index].pendingAction = true;
+    const card = document.querySelector(`.card[data-slot="${index}"] .form-select`);
+    const sel = card;
+    const btn = card ? card.closest('.card').querySelector('.btn-primary') : null;
+    if (btn) {
+        btn.disabled = true;
+        btn.childNodes.forEach(c => { if (c.nodeType === 3) c.textContent = 'Working...'; });
+    }
     const sid = sel ? parseInt(sel.value) || null : null;
-    await api.start_slot(index, sid);
-    refreshAll();
+    try {
+        await api.start_slot(index, sid);
+    } finally {
+        if (_slots[index]) _slots[index].pendingAction = false;
+        refreshAll();
+    }
 }
 
 async function pauseSlot(index) {
-    await api.pause_slot(index);
-    refreshAll();
+    if (_slots[index] && _slots[index].pendingAction) return;
+    if (_slots[index]) _slots[index].pendingAction = true;
+    const card = document.querySelector(`.card[data-slot="${index}"]`);
+    const btn = card ? card.querySelector('.btn-primary') : null;
+    if (btn) {
+        btn.disabled = true;
+        btn.childNodes.forEach(c => { if (c.nodeType === 3) c.textContent = 'Working...'; });
+    }
+    try {
+        await api.pause_slot(index);
+    } finally {
+        if (_slots[index]) _slots[index].pendingAction = false;
+        refreshAll();
+    }
 }
 
 async function archiveSlot(index) {
-    const sel = document.querySelector(`.card[data-slot="${index}"] .form-select`);
-    const inp = document.querySelector(`.card[data-slot="${index}"] .form-input`);
-    const sid = sel ? parseInt(sel.value) || null : null;
-    const desc = inp ? inp.value : '';
-    await api.archive_slot(index, sid, desc);
-    refreshAll();
+    if (_slots[index] && _slots[index].pendingAction) return;
+    if (_slots[index]) _slots[index].pendingAction = true;
+    const card = document.querySelector(`.card[data-slot="${index}"]`);
+    const btn = card ? card.querySelector('.btn-secondary') : null;
+    if (btn) {
+        btn.disabled = true;
+        btn.childNodes.forEach(c => { if (c.nodeType === 3) c.textContent = 'Working...'; });
+    }
+    try {
+        const sel = card ? card.querySelector('.form-select') : null;
+        const inp = card ? card.querySelector('.form-input') : null;
+        const sid = sel ? parseInt(sel.value) || null : null;
+        const desc = inp ? inp.value : '';
+        await api.archive_slot(index, sid, desc);
+    } finally {
+        if (_slots[index]) _slots[index].pendingAction = false;
+        refreshAll();
+    }
 }
 
 async function addSlot() {
