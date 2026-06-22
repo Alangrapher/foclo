@@ -1456,13 +1456,16 @@ function updateTodoCounter() {
 async function startTodoTimer(id) {
     const todo = _todos.find(t => t.id === id);
     if (!todo || todo.status === 'done') return;
-    // Switch to Timer page
+    // Switch to Timer page and refresh slot state
     switchPage('timer');
+    await refreshSlots();
     // Fill first idle slot
     const idleIdx = _slots.findIndex(s => s.status === 'idle');
     if (idleIdx >= 0) {
+        _slots[idleIdx].pendingAction = true;
         await api.set_description(idleIdx, todo.description || todo.subject);
         await api.start_slot(idleIdx, todo.subject_id || null);
+        _slots[idleIdx].pendingAction = false;
         refreshAll();
     }
 }
@@ -1737,7 +1740,14 @@ async function saveRecordEdit(span) {
     const desc = tr.querySelector('.cell-desc input').value;
     const start = tr.querySelector('.cell-start input').value;
     const end = tr.querySelector('.cell-end input').value;
-    if (id && api) await api.update_record(id, {description: desc, start_time: start, end_time: end});
+    const subjSelect = tr.querySelector('.cell-subj select');
+    const subjName = subjSelect ? subjSelect.value : null;
+    const subj = subjName ? _subjects.find(s => s.name === subjName) : null;
+    if (id && api) {
+        const payload = {description: desc, start_time: start, end_time: end};
+        if (subj) payload.subject_id = subj.id;
+        await api.update_record(id, payload);
+    }
     refreshRecords();
 }
 
@@ -1790,26 +1800,30 @@ function restoreSubjectActions(row) {
 }
 
 // ═══ Records: manual add ═══════════════════════════════
+let _addingRecord = false;
 async function addRecord() {
     if (!api) return;
-    const dateField = document.getElementById('recordsDateField');
+    if (_addingRecord) return;
     const subjField = document.getElementById('recordsSubject');
-    const descField = document.getElementById('recordsDesc');
-    const startField = document.getElementById('recordsStart');
-    const endField = document.getElementById('recordsEnd');
-
-    const desc = descField ? descField.value : '';
-    const start = startField ? startField.value : '';
-    const end = endField ? endField.value : '';
     const subjName = subjField ? subjField.value : '';
     const subj = _subjects.find(s => s.name === subjName);
-    const sid = subj ? subj.id : null;
-
-    await api.add_record(sid || 1, desc, start, end);
-    if (descField) descField.value = '';
-    if (startField) startField.value = '';
-    if (endField) endField.value = '';
-    refreshRecords();
+    if (!subj) { alert('Please select a subject first.'); return; }
+    _addingRecord = true;
+    try {
+        const descField = document.getElementById('recordsDesc');
+        const startField = document.getElementById('recordsStart');
+        const endField = document.getElementById('recordsEnd');
+        const desc = descField ? descField.value : '';
+        const start = startField ? startField.value : '';
+        const end = endField ? endField.value : '';
+        await api.add_record(subj.id, desc, start, end);
+        if (descField) descField.value = '';
+        if (startField) startField.value = '';
+        if (endField) endField.value = '';
+        refreshRecords();
+    } finally {
+        _addingRecord = false;
+    }
 }
 
 // ═══ Close button — minimize to tray (Windows) ═══
