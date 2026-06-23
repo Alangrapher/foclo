@@ -44,8 +44,8 @@ app = BUNDLE(
     info_plist={
         'CFBundleName': 'Alangrapher',
         'CFBundleDisplayName': 'Alangrapher',
-        'CFBundleVersion': '0.31',
-        'CFBundleShortVersionString': '0.31',
+        'CFBundleVersion': '0.35',
+        'CFBundleShortVersionString': '0.35',
         'NSHighResolutionCapable': True,
         'LSMinimumSystemVersion': '13.0',
     },

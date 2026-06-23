@@ -53,19 +53,33 @@ jobs:
             --hidden-import webview.platforms.winforms `
             main.py
 
+      - name: Download WebView2 Evergreen Bootstrapper
+        run: |
+          Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/p/?LinkId=2124703" `
+            -OutFile "MicrosoftEdgeWebview2Setup.exe"
+
+      - name: Extract version from tag
+        id: version
+        if: startsWith(github.ref, 'refs/tags/win-v')
+        shell: pwsh
+        run: |
+          $ver = "${{ github.ref_name }}" -replace '^win-v', ''
+          echo "version=$ver" >> $env:GITHUB_OUTPUT
+
+      - name: Build installer (Inno Setup)
+        run: |
+          $ver = if ("${{ steps.version.outputs.version }}") { "${{ steps.version.outputs.version }}" } else { "0.0.0-dev" }
+          iscc /DVersion=$ver installer.iss
+
       - name: Upload release artifact
         uses: actions/upload-artifact@v4
         if: github.ref_type != 'tag'
         with:
           name: Alangrapher-Windows
-          path: dist/Alangrapher.exe
-
-      - name: Upload debug artifact
-        uses: actions/upload-artifact@v4
-        if: github.ref_type != 'tag'
-        with:
-          name: Alangrapher-Windows-DEBUG
-          path: dist/Alangrapher-debug.exe
+          path: |
+            dist/Alangrapher.exe
+            dist/Alangrapher-debug.exe
+            dist/Alangrapher-Setup-*.exe
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -75,13 +89,18 @@ jobs:
           body: |
             ## Windows ${{ github.ref_name }}
 
-            **Download:** `Alangrapher.exe` below — double-click to run. Windows SmartScreen may warn on first launch; click "More info" → "Run anyway".
+            ### Recommended: Installer
+            Download `Alangrapher-Setup-*.exe` — double-click to install. It will automatically install the WebView2 runtime if needed.
 
-            For console output (debugging): download `Alangrapher-debug.exe`.
+            ### Alternative: Portable
+            `Alangrapher.exe` — no install, just run. **Requires Microsoft Edge WebView2 Runtime** ([download](https://go.microsoft.com/fwlink/p/?LinkId=2124703) if you see a blank window).
+
+            `Alangrapher-debug.exe` — same as above but with a console window for troubleshooting.
 
             ### Changes
             See [full changelog](https://github.com/Alangrapher/foclo/commits/main).
           files: |
+            dist/Alangrapher-Setup-*.exe
             dist/Alangrapher.exe
             dist/Alangrapher-debug.exe
           draft: false
