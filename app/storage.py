@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import sqlite3
+import threading
+import time
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -9,14 +11,72 @@ from app.platform_adapter import app_data_dir
 
 DB_PATH = app_data_dir() / "alangrapher.db"
 
+_conn_gate = threading.Condition()
+_active_connections = 0
+_quiescing = False
+
+
+class _TrackedConnection(sqlite3.Connection):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._alangrapher_closed = False
+
+    def close(self):
+        global _active_connections
+        try:
+            return super().close()
+        finally:
+            with _conn_gate:
+                if not self._alangrapher_closed:
+                    self._alangrapher_closed = True
+                    _active_connections -= 1
+                    _conn_gate.notify_all()
+
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    conn.execute("PRAGMA busy_timeout=3000")  # 3s timeout to prevent "database locked"
-    return conn
+    global _active_connections
+    with _conn_gate:
+        while _quiescing:
+            _conn_gate.wait()
+        _active_connections += 1
+    try:
+        conn = sqlite3.connect(str(DB_PATH), factory=_TrackedConnection)
+    except Exception:
+        with _conn_gate:
+            _active_connections -= 1
+            _conn_gate.notify_all()
+        raise
+    try:
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
+        conn.execute("PRAGMA busy_timeout=3000")  # 3s timeout to prevent "database locked"
+        return conn
+    except Exception:
+        conn.close()
+        raise
+
+
+@contextmanager
+def quiesce_connections(timeout: float = 5.0):
+    """Block new app DB connections and wait for existing get_conn() users."""
+    global _quiescing
+    deadline = time.monotonic() + timeout
+    with _conn_gate:
+        _quiescing = True
+        while _active_connections > 0:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                _quiescing = False
+                _conn_gate.notify_all()
+                raise TimeoutError("Timed out waiting for database connections to close")
+            _conn_gate.wait(remaining)
+    try:
+        yield
+    finally:
+        with _conn_gate:
+            _quiescing = False
+            _conn_gate.notify_all()
 
 
 @contextmanager

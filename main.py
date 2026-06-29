@@ -115,6 +115,7 @@ def main():
     # BUG 11: graceful shutdown — stop the backup timer to prevent
     # daemon thread from writing a corrupt half-written backup on exit
     backup.stop()
+    backup._backup_in_progress.wait(timeout=5)
 
 
 if __name__ == "__main__":

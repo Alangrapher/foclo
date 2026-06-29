@@ -98,6 +98,10 @@ class Api:
     # ── Timer ──────────────────────────────────────────
 
     def _validate_slot(self, index: int) -> dict | None:
+        try:
+            index = int(index)
+        except (TypeError, ValueError):
+            return {"ok": False, "error": f"Invalid slot index: {index}"}
         if 0 <= index < len(self.engine.slots):
             return None
         return {"ok": False, "error": f"Invalid slot index: {index}"}
@@ -119,10 +123,12 @@ class Api:
     def archive_slot(self, index: int, subject_id: int | None = None, description: str = ""):
         if err := self._validate_slot(index):
             return err
-        if subject_id is not None:
-            self.engine.slots[index].subject_id = subject_id
-        if description:
-            self.engine.set_description(index, description)
+        if subject_id is not None or description:
+            self.engine.update_slot_metadata(
+                index,
+                subject_id=subject_id,
+                description=description if description else None,
+            )
         record_id = self.engine.archive(index)
         self._refresh_tray()
         return {"ok": True, "record_id": record_id}
@@ -243,7 +249,7 @@ class Api:
                 path = os.path.join(folder, f"alangrapher_export_{s_str}_{e_str}{ext}")
             else:
                 import tempfile
-                path = f"{tempfile.gettempdir()}/alangrapher_export_{s_str}_{e_str}{ext}"
+                path = os.path.join(tempfile.gettempdir(), f"alangrapher_export_{s_str}_{e_str}{ext}")
 
             if format == "md":
                 result = export_markdown(path, start_date=sd, end_date=ed)
@@ -254,7 +260,7 @@ class Api:
                 if result is None:
                     return {"ok": False, "error": "openpyxl is not installed — install with: pip install openpyxl"}
             return {"ok": True, "path": result}
-        except ValueError as e:
+        except (ValueError, PermissionError, OSError) as e:
             return {"ok": False, "error": str(e)}
 
     def choose_export_folder(self, start_dir: str = ""):
@@ -326,4 +332,7 @@ class Api:
             conn.execute("ROLLBACK")
             return {"ok": False, "error": str(e)}
         finally:
-            conn.close()
+            try:
+                conn.close()
+            except Exception:
+                pass

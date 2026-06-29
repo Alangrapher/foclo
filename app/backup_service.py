@@ -43,6 +43,7 @@ class BackupService:
         self._consecutive_failures = 0       # BUG 9: track silent backup failures
         self._last_backup_time: str | None = None  # ISO timestamp of last successful backup
         self._backup_in_progress = threading.Event()  # guards restore / quit race
+        self._backup_in_progress.set()  # start idle (set = no backup running)
 
     # ── lifecycle ──────────────────────────────────────────
 
@@ -65,9 +66,10 @@ class BackupService:
         self._timer.start()
 
     def _tick(self):
-        self._backup_in_progress.set()
+        self._backup_in_progress.clear()  # block waiters during backup
         try:
-            self._do_backup()
+            with self._lock:               # serialize with manual backup
+                self._do_backup()
             self._consecutive_failures = 0   # BUG 9: reset on success
             self._last_backup_time = datetime.now().isoformat()
         except Exception:
@@ -76,7 +78,7 @@ class BackupService:
             traceback.print_exc()
             print(f"[BackupService] backup failed ({self._consecutive_failures} consecutive failures)")
         finally:
-            self._backup_in_progress.clear()
+            self._backup_in_progress.set()   # unblock waiters
             with self._lock:
                 if not self._stopped:        # BUG 1: don't reschedule after stop()
                     self._schedule_next()
@@ -94,16 +96,16 @@ class BackupService:
         """Manual backup trigger. Returns (ok, path|error)."""
         with self._lock:
             try:
-                self._backup_in_progress.set()
+                self._backup_in_progress.clear()  # block waiters
                 try:
                     path = self._do_backup(force=True)  # BUG 7: bypass auto_backup check
                     if path:
                         return True, path
                     return False, "Backup failed — check backup location"
                 finally:
-                    self._backup_in_progress.clear()
+                    self._backup_in_progress.set()   # unblock waiters
             except Exception as e:
-                self._backup_in_progress.clear()
+                self._backup_in_progress.set()
                 return False, str(e)
 
     def _do_backup(self, force: bool = False) -> str | None:
@@ -122,12 +124,14 @@ class BackupService:
         # Use get_conn() for WAL mode + busy_timeout, then backup API
         from app.storage import get_conn
         src = get_conn()
+        dst = None
         try:
             dst = sqlite3.connect(dest)
             try:
                 src.backup(dst)
             finally:
-                dst.close()
+                if dst is not None:
+                    dst.close()
         finally:
             src.close()
 
@@ -233,29 +237,37 @@ class BackupService:
                 if slot.status in ("running", "paused"):
                     engine.pause(slot.index)
 
-        # Checkpoint WAL and close any live connections before overwriting
-        live_conn = sqlite3.connect(str(DB_PATH))
-        try:
-            live_conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-        finally:
-            live_conn.close()
+        from app.storage import quiesce_connections
 
-        # Copy backup over the live DB
         import shutil
         try:
-            shutil.copy2(backup_path, str(DB_PATH))
+            with quiesce_connections(timeout=5):
+                # Checkpoint WAL after app connections are idle, then overwrite
+                # the main DB while get_conn() is briefly blocked.
+                live_conn = sqlite3.connect(str(DB_PATH))
+                try:
+                    live_conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                finally:
+                    live_conn.close()
+
+                shutil.copy2(backup_path, str(DB_PATH))
+
+                # BUG 2: delete stale WAL / SHM files left over after copy
+                db_str = str(DB_PATH)
+                for suffix in ("-wal", "-shm"):
+                    stale = db_str + suffix
+                    if os.path.isfile(stale):
+                        try:
+                            os.remove(stale)
+                        except OSError:
+                            pass
+        except TimeoutError as e:
+            return False, str(e)
         except OSError as e:
             return False, f"Failed to write database: {e}"
 
-        # BUG 2: delete stale WAL / SHM files left over after copy
-        db_str = str(DB_PATH)
-        for suffix in ("-wal", "-shm"):
-            stale = db_str + suffix
-            if os.path.isfile(stale):
-                try:
-                    os.remove(stale)
-                except OSError:
-                    pass
+        if engine is not None:
+            engine.reload_state()
 
         return True, backup_path
 
