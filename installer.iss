@@ -57,22 +57,40 @@ Filename: "{tmp}\MicrosoftEdgeWebview2Setup.exe"; \
   StatusMsg: "Installing Microsoft Edge WebView2 Runtime..."; \
   Flags: runhidden waituntilterminated
 
-; Optionally launch after install
+; Only launch the app if WebView2 is confirmed present.
+; If the bootstrapper failed, the launch is silently skipped
+; and the user gets a Start Menu shortcut to retry manually.
 Filename: "{app}\{#AppExeName}"; \
   Description: "{cm:LaunchProgram,{#AppName}}"; \
-  Flags: nowait postinstall skipifsilent
+  Flags: nowait postinstall skipifsilent; \
+  Check: HasWebView2
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{localappdata}\Alangrapher"
 
 [Code]
-// Check if WebView2 Evergreen Runtime is already installed.
-// The bootstrapper is still always run (it's a no-op if already installed),
-// but this gives us a chance to skip the progress message if unnecessary.
+// Robust WebView2 detection — checks multiple registry locations.
+// The Evergreen Runtime registers under HKLM with this GUID.
+// Used by [Run] Check parameter to skip app launch if WebView2 is missing.
 function HasWebView2: Boolean;
+var
+  KeyPaths: array of String;
+  i: Integer;
 begin
-  Result := RegKeyExists(
-    HKLM,
-    'SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
-  );
+  SetArrayLength(KeyPaths, 5);
+  KeyPaths[0] := 'SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}';
+  KeyPaths[1] := 'SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}';
+  KeyPaths[2] := 'SOFTWARE\WOW6432Node\Microsoft\EdgeWebView\';
+  KeyPaths[3] := 'SOFTWARE\Microsoft\EdgeWebView\';
+  KeyPaths[4] := 'SOFTWARE\Classes\CLSID\{26C7A6A1-C9E3-4E9A-A09C-3F1D7F0A2D5B}\';
+
+  for i := 0 to 4 do
+  begin
+    if RegKeyExists(HKLM, KeyPaths[i]) then
+    begin
+      Result := True;
+      Exit;
+    end;
+  end;
+  Result := False;
 end;

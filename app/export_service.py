@@ -47,16 +47,18 @@ def _collect_data(start_date: date | None, end_date: date | None) -> dict:
         )
 
     conn = get_conn()
-    rows = conn.execute(
-        """SELECT r.id, r.subject_id, r.description, r.start_time, r.duration_s,
-                  s.name AS subject_name
-           FROM records r
-           LEFT JOIN subjects s ON r.subject_id = s.id
-           WHERE date(r.start_time) BETWEEN ? AND ?
-           ORDER BY r.subject_id, r.start_time""",
-        (s.isoformat(), e.isoformat()),
-    ).fetchall()
-    conn.close()
+    try:
+        rows = conn.execute(
+            """SELECT r.id, r.subject_id, r.description, r.start_time, r.duration_s,
+                      s.name AS subject_name
+               FROM records r
+               LEFT JOIN subjects s ON r.subject_id = s.id
+               WHERE date(r.start_time) BETWEEN ? AND ?
+               ORDER BY r.subject_id, r.start_time""",
+            (s.isoformat(), e.isoformat()),
+        ).fetchall()
+    finally:
+        conn.close()
 
     if not rows:
         raise ValueError(f"No records found for {s} – {e}")

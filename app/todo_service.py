@@ -13,7 +13,7 @@ def get_todos() -> list[dict]:
             FROM todos t
             LEFT JOIN subjects s ON t.subject_id=s.id
             WHERE t.status != 'archived'
-            ORDER BY t.sort_order
+            ORDER BY CASE WHEN t.status='pending' THEN 0 ELSE 1 END, t.id DESC
             """
         ).fetchall()
         return [

@@ -88,7 +88,7 @@ function whenReady(fn) {
     attempts++;
     if (startIfReady()) {
       clearInterval(checkInterval);
-    } else if (attempts === maxAttempts && !renderedOffline && !window.pywebview) {
+    } else if (attempts === maxAttempts && !renderedOffline && !pyApi) {
       renderedOffline = true;
       console.error('pywebview API not available after ' + maxAttempts + ' attempts; rendering offline state while continuing to wait');
       fn();
@@ -656,12 +656,16 @@ function renderTodayRecords() {
   }
 }
 
-function fillRecordToSlot(id) {
+async function fillRecordToSlot(id) {
   const record = records.find(r => Number(r.id) === Number(id));
   if (!record) return;
   // Only today's records can be loaded into timer
   if (record.date !== todayIso()) return;
-  const slot = slots.find(s => s.status === 'idle') || slots[0];
+  let slot = slots.find(s => s.status === 'idle');
+  if (!slot) {
+    await addSlot();
+    slot = slots.find(s => s.status === 'idle') || slots[slots.length - 1];
+  }
   const subj = subjects.find(s => s.name === record.subject_name);
   // Also try matching by subject_id for records loaded from API
   const subjById = !subj ? subjects.find(s => Number(s.id) === Number(record.subject_id)) : null;
@@ -669,8 +673,8 @@ function fillRecordToSlot(id) {
   slot.subject_id = bestSubj ? bestSubj.id : null;
   slot.description = record.description || '';
   if (window.pywebview && window.pywebview.api) {
-    callApi(window.pywebview.api.set_description(slot.index, slot.description), 'Update timer description');
-    callApi(window.pywebview.api.set_resume_record(slot.index, record.id), 'Set resume record');
+    await callApi(window.pywebview.api.set_description(slot.index, slot.description), 'Update timer description');
+    await callApi(window.pywebview.api.set_resume_record(slot.index, record.id), 'Set resume record');
   }
   switchPage('timer');
   renderTimer();
@@ -876,7 +880,11 @@ async function startTodoTimer(arg) {
   const id = typeof arg === 'number' ? arg : Number(arg.closest('.todo-item').dataset.id);
   const todo = todos.find(t => Number(t.id) === Number(id));
   if (!todo || todo.status === 'done') return;
-  let slot = slots.find(s => s.status === 'idle') || slots[0];
+  let slot = slots.find(s => s.status === 'idle');
+  if (!slot) {
+    await addSlot();
+    slot = slots.find(s => s.status === 'idle') || slots[slots.length - 1];
+  }
   let subj = subjectById(todo.subject_id);
   if (!subj) subj = subjects.find(s => s.name === todo.subject);
   if (!subj) { subj = {id: null, name: todo.subject, color: '#5E6AD2'}; }

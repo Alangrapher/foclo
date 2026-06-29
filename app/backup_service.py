@@ -42,6 +42,7 @@ class BackupService:
         self._stopped = False               # BUG 1: guard against scheduling after stop
         self._consecutive_failures = 0       # BUG 9: track silent backup failures
         self._last_backup_time: str | None = None  # ISO timestamp of last successful backup
+        self._backup_in_progress = threading.Event()  # guards restore / quit race
 
     # ── lifecycle ──────────────────────────────────────────
 
@@ -64,6 +65,7 @@ class BackupService:
         self._timer.start()
 
     def _tick(self):
+        self._backup_in_progress.set()
         try:
             self._do_backup()
             self._consecutive_failures = 0   # BUG 9: reset on success
@@ -74,6 +76,7 @@ class BackupService:
             traceback.print_exc()
             print(f"[BackupService] backup failed ({self._consecutive_failures} consecutive failures)")
         finally:
+            self._backup_in_progress.clear()
             with self._lock:
                 if not self._stopped:        # BUG 1: don't reschedule after stop()
                     self._schedule_next()
@@ -89,13 +92,19 @@ class BackupService:
 
     def backup_now(self) -> tuple[bool, str]:
         """Manual backup trigger. Returns (ok, path|error)."""
-        try:
-            path = self._do_backup(force=True)  # BUG 7: bypass auto_backup check
-            if path:
-                return True, path
-            return False, "Backup failed — check backup location"
-        except Exception as e:
-            return False, str(e)
+        with self._lock:
+            try:
+                self._backup_in_progress.set()
+                try:
+                    path = self._do_backup(force=True)  # BUG 7: bypass auto_backup check
+                    if path:
+                        return True, path
+                    return False, "Backup failed — check backup location"
+                finally:
+                    self._backup_in_progress.clear()
+            except Exception as e:
+                self._backup_in_progress.clear()
+                return False, str(e)
 
     def _do_backup(self, force: bool = False) -> str | None:
         # Re-read setting every tick so toggles take effect without restart
@@ -216,8 +225,9 @@ class BackupService:
         except sqlite3.Error as e:
             return False, f"Invalid database file: {e}"
 
-        # Stop the backup timer and pause all slots so no writes hit the DB
+        # Stop the backup timer and wait for any in-progress backup to finish
         self.stop()
+        self._backup_in_progress.wait(timeout=5)  # don't copy over DB while backup is writing
         if engine is not None:
             for slot in engine.slots:
                 if slot.status in ("running", "paused"):

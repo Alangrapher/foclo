@@ -41,9 +41,8 @@ class Api:
 
     def quit_app(self):
         # Archive all active slots, then stop backup before exiting.
-        # Defer process exit to background thread so the JS bridge
-        # call can return first — calling Cocoa/AppKit from inside
-        # a JS→Py bridge callback risks deadlock.
+        # Wait for any in-progress backup to complete (max 5s) to avoid
+        # leaving a partial backup file on disk.
         try:
             self.archive_all_slots()
         except Exception:
@@ -51,6 +50,7 @@ class Api:
         if self._backup:
             try:
                 self._backup.stop()
+                self._backup._backup_in_progress.wait(timeout=5)
             except Exception:
                 pass
         import os, threading
@@ -261,7 +261,7 @@ class Api:
         """Open native folder picker for export destination. macOS: PyObjC. Fallback: tkinter."""
         from app.backup_service import BackupService
         path = BackupService.choose_folder(start_dir or os.path.expanduser("~/Desktop"))
-        return {"ok": True, "path": path} if path else {"ok": False, "path": None}
+        return {"ok": True, "path": path or ""}
 
     # ── Backup ──────────────────────────────────────────
 

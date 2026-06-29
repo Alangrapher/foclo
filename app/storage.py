@@ -36,6 +36,14 @@ def init_db():
     _legacy_path = Path(__file__).resolve().parent.parent / "data" / "alangrapher.db"
     if not DB_PATH.exists() and _legacy_path.exists():
         import shutil
+        # Flush WAL to main DB file before copying — otherwise any
+        # committed-but-not-checkpointed data in -wal/-shm is lost.
+        try:
+            _legacy_conn = sqlite3.connect(str(_legacy_path))
+            _legacy_conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            _legacy_conn.close()
+        except Exception:
+            pass  # skip checkpoint failures; copy what we can
         shutil.copy2(str(_legacy_path), str(DB_PATH))
 
     with db_connection() as conn:
