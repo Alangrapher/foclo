@@ -1459,8 +1459,15 @@ async function startTodoTimer(id) {
     // Switch to Timer page and refresh slot state
     switchPage('timer');
     await refreshSlots();
-    // Fill first idle slot
-    const idleIdx = _slots.findIndex(s => s.status === 'idle');
+    // Fill first idle slot, or create a new one
+    let idleIdx = _slots.findIndex(s => s.status === 'idle');
+    if (idleIdx < 0) {
+        const result = await api.add_slot();
+        if (result.ok) {
+            await refreshSlots();
+            idleIdx = _slots.findIndex(s => s.status === 'idle');
+        }
+    }
     if (idleIdx >= 0) {
         _slots[idleIdx].pendingAction = true;
         await api.set_description(idleIdx, todo.description || todo.subject);
@@ -1695,7 +1702,14 @@ async function fillRecordToSlot(id) {
     const todayRecs = await api.get_records('today');
     const record = todayRecs.find(r => Number(r.id) === Number(id));
     if (!record) return;
-    const idleIdx = _slots.findIndex(s => s.status === 'idle');
+    let idleIdx = _slots.findIndex(s => s.status === 'idle');
+    if (idleIdx < 0) {
+        const result = await api.add_slot();
+        if (result.ok) {
+            await refreshSlots();
+            idleIdx = _slots.findIndex(s => s.status === 'idle');
+        }
+    }
     if (idleIdx < 0) return;
     const subj = _subjects.find(s => s.name === record.subject_name);
     await api.set_resume_record(idleIdx, record.id);

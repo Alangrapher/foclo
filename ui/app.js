@@ -387,7 +387,9 @@ async function renderTimer() {
     if (node.classList.contains('card')) node.remove();
     node = next;
   }
-  slots.forEach(slot => page.insertBefore(timerCard(slot), tileRow));
+  if (tileRow) {
+    slots.forEach(slot => page.insertBefore(timerCard(slot), tileRow));
+  }
   renderTodayRecords();
   await updateTiles();
 }
@@ -513,7 +515,7 @@ async function archiveSlot(index) {
   if (!slots[index] || slots[index].pendingAction) return;
   slots[index].pendingAction = true;
   const card = document.querySelector(`.timer-slot-card[data-slot="${index}"]`);
-  const sid = card ? Number(card.querySelector('.form-select').value) || null : slots[index].subject_id;
+  const sid = card ? (Number(card.querySelector('.form-select')?.value) || null) : slots[index].subject_id;
   const desc = card ? card.querySelector('.form-input').value : slots[index].description;
   try {
     if (window.pywebview && window.pywebview.api) {
@@ -712,15 +714,19 @@ function renderCompact() {
   const slot = slots[compactIndex] || slots[0];
   if (!slot) return;
   const panel = document.getElementById('compactPanel');
+  if (!panel) return;
   const subj = subjectById(slot.subject_id);
   const status = slot.status || 'idle';
-  panel.querySelector('.compact-top').innerHTML = `<span class="badge ${status}"><span class="dot"></span> ${status[0].toUpperCase() + status.slice(1)}</span>`;
-  panel.querySelector('.compact-slot-indicator').textContent = `${compactIndex + 1} / ${slots.length}`;
-  panel.querySelector('.compact-clock').textContent = slot.display_time || '00:00:00';
+  const compactTop = panel.querySelector('.compact-top');
+  if (compactTop) compactTop.innerHTML = `<span class="badge ${status}"><span class="dot"></span> ${status[0].toUpperCase() + status.slice(1)}</span>`;
+  const indicator = panel.querySelector('.compact-slot-indicator');
+  if (indicator) indicator.textContent = `${compactIndex + 1} / ${slots.length}`;
+  const clockEl = panel.querySelector('.compact-clock');
+  if (clockEl) clockEl.textContent = slot.display_time || '00:00:00';
   const subjText = subj ? subj.name : '—';
   const desc = slot.description ? ' — ' + slot.description : '';
-  panel.querySelector('.compact-subject').textContent = subjText + desc;
-  panel.querySelector('.compact-subject').style.display = '';
+  const subjectEl = panel.querySelector('.compact-subject');
+  if (subjectEl) { subjectEl.textContent = subjText + desc; subjectEl.style.display = ''; }
   const arrows = panel.querySelectorAll('.arrow');
   if (arrows.length >= 2) {
     arrows[0].style.visibility = slots.length > 1 ? 'visible' : 'hidden';
