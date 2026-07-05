@@ -17,8 +17,6 @@ DAY_ABBR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 def _week_range(ref_date: date | None = None) -> tuple[date, date]:
     d = ref_date or date.today()
     sunday = d - timedelta(days=(d.weekday() + 1) % 7)
-    if sunday > d:
-        sunday -= timedelta(days=7)
     return sunday, sunday + timedelta(days=6)
 
 

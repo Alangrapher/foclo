@@ -39,6 +39,40 @@ class Api:
         self._window.resize(int(width), int(height))
         return {"ok": True, "width": int(width), "height": int(height)}
 
+    def start_window_drag(self):
+        """Initiate native frameless window dragging on Windows.
+
+        Uses the classic Win32 trick: ReleaseCapture() + SendMessage(WM_NCLBUTTONDOWN, HTCAPTION).
+        This tells the OS 'pretend the user clicked the title bar' — the window manager
+        takes over mouse tracking and the drag is native-smooth.
+        """
+        import sys as _sys
+        if _sys.platform != "win32":
+            return {"ok": False, "error": "Only supported on Windows"}
+        if not self._window:
+            return {"ok": False, "error": "Window not available"}
+        import ctypes
+        # Find the top-level window by title. pywebview's edgechromium backend
+        # creates a WinForms Form with our title; FindWindowW finds it.
+        hwnd = ctypes.windll.user32.FindWindowW(None, "Alangrapher")
+        if not hwnd:
+            # Fallback: try to find the window via pywebview's internal reference.
+            # Some pywebview versions expose the handle through the gui object.
+            try:
+                from webview import windows
+                for w in windows:
+                    if hasattr(w, 'hwnd'):
+                        hwnd = w.hwnd
+                        break
+            except Exception:
+                pass
+        if not hwnd:
+            return {"ok": False, "error": "Could not find window handle"}
+        # WM_NCLBUTTONDOWN = 0x00A1, HTCAPTION = 0x0002
+        ctypes.windll.user32.ReleaseCapture()
+        ctypes.windll.user32.SendMessageW(hwnd, 0x00A1, 0x0002, 0)
+        return {"ok": True}
+
     def quit_app(self):
         # Archive all active slots, then stop backup before exiting.
         # Wait for any in-progress backup to complete (max 5s) to avoid
@@ -50,7 +84,7 @@ class Api:
         if self._backup:
             try:
                 self._backup.stop()
-                self._backup._backup_in_progress.wait(timeout=5)
+                self._backup.wait_for_completion(timeout=5)
             except Exception:
                 pass
         import os, threading
@@ -91,9 +125,6 @@ class Api:
             if s.elapsed_s > 0 or s.status == "running":
                 return True
         return False
-
-    def tick(self):
-        pass
 
     # ── Timer ──────────────────────────────────────────
 
@@ -161,7 +192,9 @@ class Api:
         if err := self._validate_slot(index):
             return err
         ok = self.engine.remove_slot(index)
-        return {"ok": ok, "count": self.engine.get_slot_count()}
+        if not ok:
+            return {"ok": False, "error": "Cannot remove last slot", "count": self.engine.get_slot_count()}
+        return {"ok": True, "count": self.engine.get_slot_count()}
 
     def set_description(self, index: int, description: str):
         if err := self._validate_slot(index):
@@ -302,6 +335,8 @@ class Api:
 
     def restore_backup(self, backup_path: str):
         """Restore from backup file, then quit the app."""
+        if not self._backup:
+            return {"ok": False, "error": "Backup service not available"}
         ok, detail = self._backup.restore_backup(backup_path, self.engine)
         if ok and self._window:
             self._window.destroy()

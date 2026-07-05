@@ -58,6 +58,10 @@ class BackupService:
                 self._timer.cancel()
                 self._timer = None
 
+    def wait_for_completion(self, timeout: float = 5.0) -> bool:
+        """Block until any in-progress backup finishes. Returns True if completed."""
+        return self._backup_in_progress.wait(timeout=timeout)
+
     # ── schedule ───────────────────────────────────────────
 
     def _schedule_next(self):

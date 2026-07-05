@@ -41,12 +41,21 @@ JS_PATH = os.path.join(UI_DIR, "app.js")
 
 def build_html() -> str:
     """Read ui/* files and inline CSS/JS into a single HTML string."""
-    with open(INDEX_PATH, "r", encoding="utf-8") as f:
-        html = f.read()
-    with open(CSS_PATH, "r", encoding="utf-8") as f:
-        css = f.read()
-    with open(JS_PATH, "r", encoding="utf-8") as f:
-        js = f.read()
+    import tkinter.messagebox as _tkmsg
+    try:
+        with open(INDEX_PATH, "r", encoding="utf-8") as f:
+            html = f.read()
+        with open(CSS_PATH, "r", encoding="utf-8") as f:
+            css = f.read()
+        with open(JS_PATH, "r", encoding="utf-8") as f:
+            js = f.read()
+    except FileNotFoundError as e:
+        _tkmsg.showerror(
+            "Alangrapher — Missing UI files",
+            f"Could not load UI file:\n{e.filename}\n\n"
+            "The application bundle may be incomplete. Please reinstall.",
+        )
+        sys.exit(1)
 
     html = html.replace("<!-- INLINE_CSS -->", f"<style>\n{css}\n</style>")
     html = html.replace("<!-- INLINE_JS -->", f"<script>\n{js}\n</script>")
@@ -90,14 +99,16 @@ def main():
     if sys.platform == "darwin":
         from app.tray import TrayIcon
         tray = TrayIcon(window, check_fn=lambda: any(
-            s.status == "running" for s in api.engine.slots
+            s.status == "running" or s.status == "paused" or s.elapsed_s > 0
+            for s in api.engine.slots
         ))
         tray.start()
         api.set_tray(tray)
     elif sys.platform == "win32":
         from app.tray_windows import WindowsTray
         tray = WindowsTray(window, check_fn=lambda: any(
-            s.status == "running" for s in api.engine.slots
+            s.status == "running" or s.status == "paused" or s.elapsed_s > 0
+            for s in api.engine.slots
         ))
         tray.start()
         api.set_tray(tray)
@@ -112,10 +123,10 @@ def main():
     else:
         webview.start(gui="gtk")
 
-    # BUG 11: graceful shutdown — stop the backup timer to prevent
-    # daemon thread from writing a corrupt half-written backup on exit
+    # Wait for any in-progress backup to complete before exit
+    # to avoid leaving a partial backup file on disk.
     backup.stop()
-    backup._backup_in_progress.wait(timeout=5)
+    backup.wait_for_completion(timeout=5)
 
 
 if __name__ == "__main__":

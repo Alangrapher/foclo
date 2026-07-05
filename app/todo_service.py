@@ -47,10 +47,11 @@ def toggle_todo(todo_id: int) -> dict:
     conn = get_conn()
     try:
         row = conn.execute("SELECT status FROM todos WHERE id=?", (todo_id,)).fetchone()
-        if row:
-            new_status = "done" if row["status"] == "pending" else "pending"
-            conn.execute("UPDATE todos SET status=? WHERE id=?", (new_status, todo_id))
-            conn.commit()
+        if not row:
+            return {"ok": False, "error": "Todo not found"}
+        new_status = "done" if row["status"] == "pending" else "pending"
+        conn.execute("UPDATE todos SET status=? WHERE id=?", (new_status, todo_id))
+        conn.commit()
         return {"ok": True}
     finally:
         conn.close()

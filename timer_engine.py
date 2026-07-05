@@ -93,7 +93,7 @@ class TimerEngine:
 
     def _pause_slot(self, slot: TimerSlot):
         if slot.status == "running" and slot.started_at:
-            slot.elapsed_s += time.time() - slot.started_at
+            slot.elapsed_s += time.monotonic() - slot.started_at
         slot.started_at = None
         slot.status = "paused"
 
@@ -327,11 +327,10 @@ class TimerEngine:
             try:
                 conn = get_conn()
                 try:
-                    conn.execute("DELETE FROM slot_state")
                     for snapshot in snapshots:
                         index, status, subject_id, description, _resume_record_id, elapsed_s, started_at, started_at_real = snapshot
                         conn.execute(
-                            "INSERT INTO slot_state (slot_index, status, subject_id, description, elapsed_s, started_at, started_at_real) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                            "INSERT OR REPLACE INTO slot_state (slot_index, status, subject_id, description, elapsed_s, started_at, started_at_real) VALUES (?, ?, ?, ?, ?, ?, ?)",
                             (index, status, subject_id, description, elapsed_s, started_at, started_at_real),
                         )
                     conn.commit()

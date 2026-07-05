@@ -11,6 +11,7 @@
   --accent: #5E6AD2; --accent-h: #6E7AE6;
   --running: #34C98B; --paused: #F0B73F; --idle: #9AA0AD;
   --danger: #D64430; --radius: 20px; --radius-sm: 11px;
+  --modal-z: 1000;
 }
 
 body {

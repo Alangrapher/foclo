@@ -16,6 +16,11 @@ def get_subjects() -> list[dict]:
 
 
 def add_subject(name: str, color: str = "#5E6AD2") -> dict:
+    name = name.strip()
+    if not name:
+        return {"ok": False, "error": "Subject name cannot be empty"}
+    if len(name) > 100:
+        return {"ok": False, "error": "Subject name too long (max 100 chars)"}
     conn = get_conn()
     try:
         cur = conn.execute(
@@ -30,11 +35,13 @@ def add_subject(name: str, color: str = "#5E6AD2") -> dict:
 def update_subject(subject_id: int, name: str, color: str) -> dict:
     conn = get_conn()
     try:
-        conn.execute(
+        cur = conn.execute(
             "UPDATE subjects SET name=?, color=? WHERE id=?",
             (name, color, subject_id),
         )
         conn.commit()
+        if cur.rowcount == 0:
+            return {"ok": False, "error": "Subject not found"}
         return {"ok": True}
     finally:
         conn.close()

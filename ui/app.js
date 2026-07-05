@@ -66,15 +66,15 @@ let exportFolder = '';
 let clockIntervalId = null;
 
 function whenReady(fn) {
-  let startedWithApi = false;
-  let renderedOffline = false;
+  let started = false;
+  let rendered = false;
 
   const startIfReady = () => {
     const api = getPyApi();
     if (!hasRequiredApiMethods(api)) return false;
     pyApi = api;
-    if (!startedWithApi) {
-      startedWithApi = true;
+    if (!started) {
+      started = true;
       fn();
     }
     return true;
@@ -88,14 +88,15 @@ function whenReady(fn) {
     attempts++;
     if (startIfReady()) {
       clearInterval(checkInterval);
-    } else if (attempts === maxAttempts && !renderedOffline && !pyApi) {
-      renderedOffline = true;
+    } else if (attempts === maxAttempts && !rendered && !pyApi) {
+      rendered = true;
       console.error('pywebview API not available after ' + maxAttempts + ' attempts; rendering offline state while continuing to wait');
       fn();
     }
   }, 100);
 
   window.addEventListener('pywebviewready', () => {
+    if (rendered) return;  // already rendered offline, don't double-init
     if (startIfReady()) clearInterval(checkInterval);
   });
 }
@@ -115,6 +116,47 @@ document.addEventListener('DOMContentLoaded', () => {
     startClockInterval();
   });
 });
+
+// ═══════════════════════════════════════════════════════════
+// Windows frameless drag support
+// macOS uses -webkit-app-region CSS (WebKit); Windows WebView2
+// ignores this, so we hook mousedown and trigger native OS drag
+// via the Win32 SendMessage(WM_NCLBUTTONDOWN, HTCAPTION) trick.
+// ═══════════════════════════════════════════════════════════
+(function setupFramelessDrag() {
+  if (!navigator.platform.includes('Win')) return;
+
+  // Elements whose mousedown should NOT trigger dragging
+  const INTERACTIVE_SELECTOR = [
+    'button', 'input', 'select', 'textarea', 'a',
+    '.nav-item', '.btn', '.chip', '.toggle', '.toggle-slider',
+    '.todo-checkbox', '.todo-start-btn', '.todo-del-btn',
+    '.act', '.compact-expand', '.theme-toggle',
+    '.confirm-btn', '.add-slot-btn', '.arrow',
+    '[data-page]', '.slot-header span', '.header-actions',
+    '.modal-card', '.modal-overlay',
+    '.compact-panel', '.compact-actions'
+  ].join(', ');
+
+  document.addEventListener('mousedown', async (e) => {
+    // Don't interfere with right-clicks or middle clicks
+    if (e.button !== 0) return;
+    // Don't start drag on interactive elements
+    if (e.target.closest(INTERACTIVE_SELECTOR)) return;
+    // Don't start drag on scrollbar region (rightmost 16px)
+    if (e.clientX > document.documentElement.clientWidth - 16) return;
+
+    // Prevent default to avoid text selection during drag
+    e.preventDefault();
+
+    const api = getPyApi();
+    if (api && typeof api.start_window_drag === 'function') {
+      try {
+        await api.start_window_drag();
+      } catch (_) { /* silently ignore */ }
+    }
+  });
+})();
 
 window.addEventListener('beforeunload', () => {
   if (clockIntervalId) clearInterval(clockIntervalId);
@@ -200,7 +242,7 @@ function bindStaticControls() {
   trigger.addEventListener('click', () => showModal(modal));
   modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
   const removeSlotModal = document.getElementById('removeSlotModal');
-  removeSlotModal.addEventListener('click', e => { if (e.target === removeSlotModal) closeRemoveSlotModal(); });
+  if (removeSlotModal) removeSlotModal.addEventListener('click', e => { if (e.target === removeSlotModal) closeRemoveSlotModal(); });
   const quickAddModal = document.getElementById('quickAddSubjectModal');
   quickAddModal.addEventListener('click', e => { if (e.target === quickAddModal) closeQuickAddSubjectModal(); });
   quitModal.addEventListener('click', e => { if (e.target === quitModal) closeQuitModal(); });
@@ -625,8 +667,7 @@ async function setSlotDescription(index, value) {
   renderCompact();
 }
 
-function toggleCollapse(el, ev) {
-  if (ev) ev.stopPropagation();
+function toggleCollapse(el) {
   const card = el.closest('.card');
   const index = Number(card.dataset.slot);
   const clock = card.querySelector('.timer-clock');
@@ -651,7 +692,7 @@ function renderTodayRecords() {
   if (window.pywebview && window.pywebview.api) {
     callApi(window.pywebview.api.get_records('today'), 'Load today records').then(result => {
       render(Array.isArray(result) ? result : []);
-    });
+    }).catch(e => console.error('Failed to load today records:', e));
   } else {
     const todayRecords = records.filter(r => (r.date || '') === todayIso());
     render(todayRecords);
@@ -846,7 +887,8 @@ function updateDarkButton() {
 async function addTodo() {
   const subjSelect = document.getElementById('todoSubject');
   const descInput = document.getElementById('todoDesc');
-  const subjectId = Number(subjSelect.value) || null;
+  const v = Number(subjSelect.value);
+  const subjectId = isNaN(v) ? null : v;
   const subj = subjectById(subjectId);
   if (!subj) return;
   const subject = subj.name;
@@ -862,6 +904,7 @@ async function addTodo() {
 
 async function toggleTodo(arg) {
   const id = typeof arg === 'number' ? arg : Number(arg.closest('.todo-item').dataset.id);
+  if (!id || isNaN(id)) return;
   if (window.pywebview && window.pywebview.api) {
     const result = await callApi(window.pywebview.api.toggle_todo(id), 'Update todo');
     if (!result || result.ok === false) return;
@@ -872,7 +915,8 @@ async function toggleTodo(arg) {
 }
 
 async function delTodo(arg) {
-  const id = typeof arg === 'number' ? arg : Number(arg.closest('.todo-item').dataset.id);
+  const id = typeof arg === 'number' ? arg : Number(arg.closest('.todo-item')?.dataset?.id);
+  if (!id || isNaN(id)) return;
   if (window.pywebview && window.pywebview.api) {
     const result = await callApi(window.pywebview.api.delete_todo(id), 'Delete todo');
     if (!result || result.ok === false) return;
@@ -883,7 +927,8 @@ async function delTodo(arg) {
 }
 
 async function startTodoTimer(arg) {
-  const id = typeof arg === 'number' ? arg : Number(arg.closest('.todo-item').dataset.id);
+  const id = typeof arg === 'number' ? arg : Number(arg.closest('.todo-item')?.dataset?.id);
+  if (!id || isNaN(id)) return;
   const todo = todos.find(t => Number(t.id) === Number(id));
   if (!todo || todo.status === 'done') return;
   let slot = slots.find(s => s.status === 'idle');
@@ -1316,20 +1361,6 @@ function formatLocalIso(date) {
 }
 
 // ── Quit confirmation ────────────────────────────
-
-async function triggerQuitFlow() {
-  if (!pyApi) return;
-  try {
-    const active = await callApi(pyApi.any_slot_active(), 'Check active timers');
-    if (!active) {
-      await callApi(pyApi.quit_app(), 'Quit app');
-    } else {
-      showQuitModal();
-    }
-  } catch (e) {
-    await callApi(pyApi.quit_app(), 'Quit app');
-  }
-}
 
 function showQuitModal() {
   document.getElementById('quitConfirmMsg').textContent =
