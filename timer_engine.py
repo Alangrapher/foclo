@@ -1,6 +1,6 @@
 """Timer engine — per DECISIONS.md state machine.
 
-Multi-slot, mutually exclusive running. time.time() delta-based timing.
+Multi-slot, mutually exclusive running. time.monotonic() delta-based timing.
 No threads. State persisted to slot_state table for crash recovery.
 """
 from __future__ import annotations
@@ -38,7 +38,7 @@ class TimerSlot:
     def get_display(self) -> str:
         total = self.elapsed_s
         if self.status == "running" and self.started_at:
-            total += time.time() - self.started_at
+            total += time.monotonic() - self.started_at
         h = int(total // 3600)
         m = int((total % 3600) // 60)
         s = int(total % 60)
@@ -47,7 +47,7 @@ class TimerSlot:
     def get_total_s(self) -> float:
         total = self.elapsed_s
         if self.status == "running" and self.started_at:
-            total += time.time() - self.started_at
+            total += time.monotonic() - self.started_at
         return total
 
 
@@ -75,7 +75,7 @@ class TimerEngine:
             slot = self.slots[index]
             slot.status = "running"
             slot.subject_id = subject_id
-            slot.started_at = time.time()
+            slot.started_at = time.monotonic()
             # Track real wall-clock start time ONLY on fresh starts (not resume)
             # so archive() gets the correct start_time.
             # On resume, started_at_real from the original start is preserved.
@@ -245,7 +245,7 @@ class TimerEngine:
                 # Crash recovery: if was running, pause it (safe)
                 if s.status == "running":
                     if s.started_at:
-                        s.elapsed_s += time.time() - s.started_at
+                        s.elapsed_s += time.monotonic() - s.started_at
                     s.started_at = None
                     s.status = "paused"
                     # BUG 4: persist crash-recovery modifications
