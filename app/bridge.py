@@ -16,7 +16,7 @@ class Api:
     """Exposed to JavaScript via window.pywebview.api."""
 
     def __init__(self, window=None, backup_service: BackupService | None = None):
-        self.window = window
+        self._window = window
         self._backup = backup_service
         default_slots = int(get_setting("default_slots", "1"))
         self.engine = TimerEngine(num_slots=default_slots)
@@ -24,7 +24,7 @@ class Api:
     # ── Window ──────────────────────────────────────────
 
     def set_window(self, window):
-        self.window = window
+        self._window = window
 
     def set_tray(self, tray):
         self._tray = tray
@@ -34,9 +34,9 @@ class Api:
             self._tray.refresh_icon()
 
     def resize_window(self, width: int, height: int):
-        if not self.window:
+        if not self._window:
             return {"ok": False, "error": "Window is not available"}
-        self.window.resize(int(width), int(height))
+        self._window.resize(int(width), int(height))
         return {"ok": True, "width": int(width), "height": int(height)}
 
     def quit_app(self):
@@ -58,13 +58,13 @@ class Api:
         return {"ok": True}
 
     def hide_window(self):
-        if self.window:
-            self.window.hide()
+        if self._window:
+            self._window.hide()
         return {"ok": True}
 
     def show_window(self):
-        if self.window:
-            self.window.show()
+        if self._window:
+            self._window.show()
         return {"ok": True}
 
     # ── Slot batch ops ──────────────────────────────────
@@ -303,8 +303,8 @@ class Api:
     def restore_backup(self, backup_path: str):
         """Restore from backup file, then quit the app."""
         ok, detail = self._backup.restore_backup(backup_path, self.engine)
-        if ok and self.window:
-            self.window.destroy()
+        if ok and self._window:
+            self._window.destroy()
         return {"ok": ok, "path": detail} if ok else {"ok": False, "error": detail}
 
     def reset_all_data(self):
