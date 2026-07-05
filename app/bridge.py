@@ -40,37 +40,59 @@ class Api:
         return {"ok": True, "width": int(width), "height": int(height)}
 
     def start_window_drag(self):
-        """Initiate native frameless window dragging on Windows.
+        """Initiate frameless window dragging on Windows.
 
-        Uses the classic Win32 trick: ReleaseCapture() + SendMessage(WM_NCLBUTTONDOWN, HTCAPTION).
-        This tells the OS 'pretend the user clicked the title bar' — the window manager
-        takes over mouse tracking and the drag is native-smooth.
+        Spawns a background thread that polls cursor position via
+        GetCursorPos and moves the window via SetWindowPos until the
+        left mouse button is released.  Runs at ~60 fps — smooth enough
+        for a 760×620 window and avoids the WebView2 event-capture
+        issues that break the classic ReleaseCapture/SendMessage trick.
         """
         import sys as _sys
         if _sys.platform != "win32":
             return {"ok": False, "error": "Only supported on Windows"}
         if not self._window:
             return {"ok": False, "error": "Window not available"}
+
         import ctypes
-        # Find the top-level window by title. pywebview's edgechromium backend
-        # creates a WinForms Form with our title; FindWindowW finds it.
-        hwnd = ctypes.windll.user32.FindWindowW(None, "Alangrapher")
-        if not hwnd:
-            # Fallback: try to find the window via pywebview's internal reference.
-            # Some pywebview versions expose the handle through the gui object.
-            try:
-                from webview import windows
-                for w in windows:
-                    if hasattr(w, 'hwnd'):
-                        hwnd = w.hwnd
-                        break
-            except Exception:
-                pass
+        from ctypes import wintypes
+        import threading
+
+        user32 = ctypes.windll.user32
+        SWP_NOSIZE = 0x0001
+        SWP_NOZORDER = 0x0004
+
+        # ── find the window handle ──────────────────────
+        hwnd = user32.FindWindowW(None, "Alangrapher")
         if not hwnd:
             return {"ok": False, "error": "Could not find window handle"}
-        # WM_NCLBUTTONDOWN = 0x00A1, HTCAPTION = 0x0002
-        ctypes.windll.user32.ReleaseCapture()
-        ctypes.windll.user32.SendMessageW(hwnd, 0x00A1, 0x0002, 0)
+
+        # ── snapshot starting positions ─────────────────
+        pt = wintypes.POINT()
+        user32.GetCursorPos(ctypes.byref(pt))
+        start_cx, start_cy = pt.x, pt.y
+
+        rect = wintypes.RECT()
+        user32.GetWindowRect(hwnd, ctypes.byref(rect))
+        win_x, win_y = rect.left, rect.top
+
+        # ── drag loop (daemon thread, polls left button) ─
+        def _drag_loop():
+            import time as _time
+            while user32.GetAsyncKeyState(0x01) & 0x8000:
+                user32.GetCursorPos(ctypes.byref(pt))
+                dx = pt.x - start_cx
+                dy = pt.y - start_cy
+                if dx != 0 or dy != 0:
+                    user32.SetWindowPos(
+                        hwnd, 0,
+                        win_x + dx, win_y + dy,
+                        0, 0,
+                        SWP_NOSIZE | SWP_NOZORDER,
+                    )
+                _time.sleep(0.016)  # ≈ 60 Hz
+
+        threading.Thread(target=_drag_loop, daemon=True).start()
         return {"ok": True}
 
     def quit_app(self):
