@@ -62,8 +62,10 @@ let clickTimer = null;
 let lastExport = 'No exports yet';
 let isRefreshing = false;
 let isExporting = false;
-let exportFolder = '';
+let exportFolder = safeStorage.get('alangrapher.exportFolder', '');
 let clockIntervalId = null;
+
+const SUBJECT_COLORS = ['#5E6AD2', '#34C98B', '#F0B73F', '#D64430', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'];
 
 function whenReady(fn) {
   let started = false;
@@ -256,12 +258,18 @@ function bindStaticControls() {
   // Browse button for export folder
   const exportBrowseBtn = document.getElementById('export-browse-btn');
   const exportPathEl = document.getElementById('export-path');
+  // Restore saved export folder display on page load
+  if (exportPathEl && exportFolder) exportPathEl.textContent = exportFolder;
   if (exportBrowseBtn) exportBrowseBtn.addEventListener('click', async () => {
-    if (!window.pywebview || !window.pywebview.api || typeof window.pywebview.api.choose_export_folder !== 'function') return;
+    if (!window.pywebview || !window.pywebview.api) {
+      if (exportPathEl) exportPathEl.textContent = 'API not ready — please wait';
+      return;
+    }
     try {
       const result = await callApi(window.pywebview.api.choose_export_folder(exportFolder), 'Choose export folder');
       if (result && result.ok && result.path) {
         exportFolder = result.path;
+        safeStorage.set('alangrapher.exportFolder', exportFolder);
         if (exportPathEl) exportPathEl.textContent = exportFolder;
       }
     } catch (e) { /* user cancelled */ }
@@ -445,6 +453,7 @@ function timerCard(slot) {
   const hasRunningOther = slots.some(s => s.index !== index && s.status === 'running');
   const isSwitch = status !== 'running' && hasRunningOther;
   const subjectDisabled = status !== 'idle';
+  const descDisabled = status === 'running';  // only lock description while actively running
   const actionText = status === 'running' ? 'Pause' : status === 'paused' ? (isSwitch ? 'Switch' : 'Resume') : (isSwitch ? 'Switch' : 'Start');
   const iconPath = status === 'running'
     ? '<rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/>'
@@ -463,9 +472,13 @@ function timerCard(slot) {
     </div>
     <div class="timer-clock"${slot.collapsed ? ' style="display:none"' : ''}>${slot.display_time || '00:00:00'}</div>
     <div class="timer-subject-line"${slot.collapsed ? ' style="display:none"' : ''}>${subj ? esc(subj.name) : '—'}${slot.description ? ' — ' + esc(slot.description) : ''}</div>
-    <div class="form-row form-row-split"${slot.collapsed ? ' style="display:none"' : ''}>
-      <div style="flex:1"><div class="form-label">Subject</div><div class="select-wrapper"><select class="form-select" onchange="setSlotSubject(${index}, this.value)"${subjectDisabled ? ' disabled' : ''}>${subjectOptions(slot.subject_id)}</select></div></div>
-      <div style="flex:1"><div class="form-label">Description (optional)</div><input class="form-input" placeholder="What are you working on?" value="${attr(slot.description || '')}" oninput="setSlotDescription(${index}, this.value)"${subjectDisabled ? ' disabled' : ''}></div>
+    <div class="form-row"${slot.collapsed ? ' style="display:none"' : ''}>
+      <div class="form-label">Subject</div>
+      <div class="select-wrapper"><select class="form-select" onchange="setSlotSubject(${index}, this.value)"${subjectDisabled ? ' disabled' : ''}>${subjectOptions(slot.subject_id)}</select></div>
+    </div>
+    <div class="form-row"${slot.collapsed ? ' style="display:none"' : ''}>
+      <div class="form-label">Description (optional)</div>
+      <input class="form-input" placeholder="What are you working on?" value="${attr(slot.description || '')}" oninput="setSlotDescription(${index}, this.value)"${descDisabled ? ' disabled' : ''}>
     </div>
     <div class="btn-row"${slot.collapsed ? ' style="display:none"' : ''}>
       <button class="btn btn-primary${isSwitch ? ' btn-switch' : ''}" style="flex:1;" onclick="primaryTimerAction(${index})"${isPending ? ' disabled' : ''}><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${iconPath}</svg>${isPending ? 'Working...' : actionText}</button>
@@ -687,7 +700,7 @@ function renderTodayRecords() {
   const tbody = document.querySelector('#page-timer .records-table tbody');
   if (!tbody) return;
   const render = (todayRecords) => {
-    tbody.innerHTML = todayRecords.length ? todayRecords.map(r => `<tr ondblclick="fillRecordToSlot(${r.id})" title="Double-click to load into timer" data-id="${r.id}" data-subject="${attr(r.subject_name || '—')}" data-desc="${attr(r.description || '—')}" data-dur="${attr(r.duration || '0m')}"><td class="cell-subj">${esc(r.subject_name || '—')}</td><td class="cell-desc">${esc(r.description || '—')}</td><td class="cell-dur" style="text-align:right">${esc(r.duration || '0m')}</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted)">No records yet</td></tr>';
+    tbody.innerHTML = todayRecords.length ? todayRecords.map(r => `<tr ondblclick="fillRecordToSlot(${r.id})" title="Double-click to load into timer" data-id="${r.id}" data-subject="${attr(r.subject_name || '—')}" data-desc="${attr(r.description || '—')}" data-dur="${attr(r.duration || '0m')}"><td class="cell-subj">${esc(r.subject_name || '—')}</td><td class="cell-desc cell-desc-wrap">${esc(r.description || '—')}</td><td class="cell-dur" style="text-align:right">${esc(r.duration || '0m')}</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted)">No records yet</td></tr>';
   };
   if (window.pywebview && window.pywebview.api) {
     callApi(window.pywebview.api.get_records('today'), 'Load today records').then(result => {
@@ -1080,7 +1093,21 @@ function renderSubjects() {
 function editSubject(span) {
   const row = span.closest('.subject-row');
   const name = row.querySelector('.subject-name').textContent.trim();
+  const dot = row.querySelector('.subject-dot');
+  const currentColor = rgbToHex(dot.style.backgroundColor || dot.style.background || '#5E6AD2');
   row.querySelector('.subject-name').innerHTML = `<input type="text" value="${attr(name)}" style="border:none;background:transparent;font-size:13px;color:var(--text);font-family:inherit;padding:2px 4px;border-bottom:1px solid var(--accent);outline:none;flex:1;">`;
+  // Make color dot clickable to cycle through preset colors
+  dot.classList.add('editable');
+  dot.title = 'Click to change color';
+  dot.dataset.color = currentColor;
+  dot.onclick = function() {
+    const colors = SUBJECT_COLORS;
+    const idx = colors.indexOf(dot.dataset.color);
+    const next = colors[(idx + 1) % colors.length];
+    dot.dataset.color = next;
+    dot.style.backgroundColor = next;
+    dot.style.background = next;  // override for consistency
+  };
   row.querySelector('.subject-actions').innerHTML = '<span class="act save" onclick="saveSubject(this)" style="color:var(--accent);">✓</span><span class="act cancel" onclick="renderSubjects()">✕</span>';
 }
 
@@ -1089,9 +1116,11 @@ async function saveSubject(span) {
   const id = Number(row.dataset.id);
   const subj = subjects.find(s => Number(s.id) === id);
   const name = row.querySelector('input').value.trim();
+  const dot = row.querySelector('.subject-dot');
+  const color = dot.dataset.color || rgbToHex(dot.style.backgroundColor || subj?.color || '#5E6AD2');
   if (!subj || !name) return;
   if (window.pywebview && window.pywebview.api) {
-    const result = await callApi(window.pywebview.api.update_subject(id, name, subj.color), 'Update subject');
+    const result = await callApi(window.pywebview.api.update_subject(id, name, color), 'Update subject');
     if (!result || result.ok === false) return;
     await loadSubjects();
   }
