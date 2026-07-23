@@ -145,6 +145,7 @@ button, input, select, .nav-item, .card, .form-row, .btn-row, .todo-list, .recor
 .btn-secondary:hover { background: var(--hover); }
 .btn-secondary.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .btn:disabled { opacity: 0.58; cursor: wait; pointer-events: none; }
+.btn-busy { opacity: 0.58; cursor: wait; }
 .btn-sm { padding: 5px 12px; font-size: 11px; }
 .btn-close { color: var(--muted); }
 .btn-close:hover { color: #cc2200; }

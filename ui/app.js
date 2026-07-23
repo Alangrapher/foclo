@@ -260,14 +260,16 @@ function bindStaticControls() {
   const exportPathEl = document.getElementById('export-path');
   // Restore saved export folder display on page load
   if (exportPathEl && exportFolder) exportPathEl.textContent = exportFolder;
+  let browseBusy = false; // flag-based guard, avoids pointer-events: none from :disabled
   if (exportBrowseBtn) {
     exportBrowseBtn.addEventListener('click', async () => {
+      if (browseBusy) return;
       if (!window.pywebview || !window.pywebview.api) {
         if (exportPathEl) exportPathEl.textContent = 'API not ready — please wait';
         return;
       }
-      if (exportBrowseBtn.disabled) return; // prevent double-click
-      exportBrowseBtn.disabled = true;
+      browseBusy = true;
+      exportBrowseBtn.classList.add('btn-busy');
       try {
         const result = await callApi(window.pywebview.api.choose_export_folder(exportFolder), 'Choose export folder');
         if (result && result.ok && result.path) {
@@ -276,7 +278,8 @@ function bindStaticControls() {
           if (exportPathEl) exportPathEl.textContent = exportFolder;
         }
       } catch (e) { /* user cancelled */ }
-      finally { exportBrowseBtn.disabled = false; }
+      exportBrowseBtn.classList.remove('btn-busy');
+      browseBusy = false;
     });
   }
   const exportButton = document.querySelector('#page-export .btn-primary');
