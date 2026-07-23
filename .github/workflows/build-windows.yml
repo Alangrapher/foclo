@@ -25,11 +25,17 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: pip install -r requirements-windows.txt
 
       - name: Install Inno Setup
-        run: choco install innosetup --version=6.3.1 -y --no-progress
+        shell: pwsh
+        run: |
+          $url = "https://files.jrsoftware.org/is/6/innosetup-6.3.1.exe"
+          $installer = "$env:RUNNER_TEMP\innosetup.exe"
+          Invoke-WebRequest -Uri $url -OutFile $installer
+          Start-Process -FilePath $installer -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/DIR=C:\innosetup' -Wait -NoNewWindow
+          echo "C:\innosetup" >> $env:GITHUB_PATH
 
       - name: Extract version
         id: version
@@ -49,8 +55,7 @@ jobs:
       - name: Build installer with Inno Setup
         shell: pwsh
         run: |
-          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
-          & $iscc /DVersion=${{ steps.version.outputs.version }} installer.iss
+          & "C:\innosetup\ISCC.exe" /DVersion=${{ steps.version.outputs.version }} installer.iss
 
       - name: Upload installer to Release
         uses: softprops/action-gh-release@v2
