@@ -1101,14 +1101,13 @@ function renderGanttStrip(dayRecords, date) {
   
   if (positioned.length === 0) return '';
   
-  // Overlap assignment: greedy row allocation (max 3 visible rows)
-  const rows = [[], [], []]; // row[i] = [{end_sec, ...}, ...]
-  let overflowCount = 0;
+  // Overlap assignment: greedy row allocation (dynamic, no cap)
+  const rows = []; // rows[i] = [{endSec, ...}, ...]
   
   positioned.forEach(rec => {
     const endSec = rec.secFromMidnight + rec.dur;
     let placed = false;
-    for (let rowIdx = 0; rowIdx < 3; rowIdx++) {
+    for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
       const last = rows[rowIdx][rows[rowIdx].length - 1];
       if (!last || last.endSec <= rec.secFromMidnight) {
         rows[rowIdx].push({ ...rec, endSec, rowIdx });
@@ -1117,10 +1116,15 @@ function renderGanttStrip(dayRecords, date) {
       }
     }
     if (!placed) {
-      overflowCount++;
-      rows[2].push({ ...rec, endSec, rowIdx: 2 });
+      // All existing rows occupied — add a new row
+      const newRowIdx = rows.length;
+      rows.push([{ ...rec, endSec, rowIdx: newRowIdx }]);
     }
   });
+  
+  const numRows = rows.length;
+  const rowH = 13;
+  const barH = 10;
   
   // Build hour markers
   const hourMarkers = [0, 6, 12, 18, 24].map(h => 
@@ -1130,23 +1134,24 @@ function renderGanttStrip(dayRecords, date) {
   // Build bars
   const totalSec = 86400;
   const allBars = [];
-  for (let ri = 0; ri < 3; ri++) {
+  for (let ri = 0; ri < numRows; ri++) {
     rows[ri].forEach(rec => {
       const left = Math.max((rec.secFromMidnight / totalSec * 100), 0);
       const width = Math.max((rec.dur / totalSec * 100), 0.5);
-      allBars.push(`<div class="gantt-bar" style="left:${left.toFixed(2)}%;width:${width.toFixed(2)}%;top:${ri*13}px;background:${rec.color}" title="${esc(rec.subject_name)} ${rec.start}–${rec.end} (${rec.duration})"></div>`);
+      const desc = rec.description ? esc(rec.description) : '';
+      const tooltip = desc
+        ? `${esc(rec.subject_name)}: ${desc} (${rec.start}–${rec.end}, ${rec.duration})`
+        : `${esc(rec.subject_name)} ${rec.start}–${rec.end} (${rec.duration})`;
+      allBars.push(`<div class="gantt-bar" style="left:${left.toFixed(2)}%;width:${width.toFixed(2)}%;top:${ri*rowH}px;background:${rec.color}" title="${tooltip}"></div>`);
     });
   }
   
-  // Overflow indicator
-  const overflow = overflowCount > 0 ? `<span class="gantt-overflow" style="top:${2*13}px">+${overflowCount}</span>` : '';
-  
   const hasRecords = allBars.length > 0;
+  const stripH = numRows * rowH + (rowH - barH);
   return `<div class="gcard-gantt">
     <div class="gantt-ticks">${hourMarkers}</div>
-    <div class="gantt-strip" style="height:${Math.min(3, rows.filter(r => r.length > 0).length) * 13 + 4}px">
+    <div class="gantt-strip" style="height:${stripH}px">
       ${hasRecords ? allBars.join('') : '<span class="gantt-empty">No timed records</span>'}
-      ${overflow}
     </div>
   </div>`;
 }

@@ -721,10 +721,6 @@ html.dark .window { border-color: #30363D; box-shadow: 0 12px 48px rgba(0,0,0,0.
   transition: opacity 0.12s;
 }
 .gantt-bar:hover { opacity: 1; }
-.gantt-overflow {
-  position: absolute; right: 4px; font-size: 10px;
-  color: var(--accent); font-weight: 700;
-}
 .gantt-empty {
   font-size: 10px; color: var(--muted); padding: 2px 6px;
   display: block; text-align: center;
