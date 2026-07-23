@@ -262,6 +262,7 @@ function bindStaticControls() {
   // Restore saved export folder display on page load
   if (exportPathEl && exportFolder) exportPathEl.textContent = exportFolder;
   let browseBusy = false; // flag-based guard, avoids pointer-events: none from :disabled
+  let browseTimer = null;
   if (exportBrowseBtn) {
     exportBrowseBtn.addEventListener('click', async () => {
       if (browseBusy) return;
@@ -271,6 +272,12 @@ function bindStaticControls() {
       }
       browseBusy = true;
       exportBrowseBtn.classList.add('btn-busy');
+      // Safety timeout: reset busy state after 30s if promise hangs
+      clearTimeout(browseTimer);
+      browseTimer = setTimeout(() => {
+        browseBusy = false;
+        exportBrowseBtn.classList.remove('btn-busy');
+      }, 30000);
       try {
         const result = await callApi(window.pywebview.api.choose_export_folder(exportFolder), 'Choose export folder');
         if (result && result.ok && result.path) {
@@ -279,6 +286,7 @@ function bindStaticControls() {
           if (exportPathEl) exportPathEl.textContent = exportFolder;
         }
       } catch (e) { /* user cancelled */ }
+      clearTimeout(browseTimer);
       exportBrowseBtn.classList.remove('btn-busy');
       browseBusy = false;
     });

@@ -323,10 +323,26 @@ class Api:
             return {"ok": False, "error": str(e)}
 
     def choose_export_folder(self, start_dir: str = ""):
-        """Open native folder picker for export destination. macOS: PyObjC. Fallback: tkinter."""
-        from app.backup_service import BackupService
-        path = BackupService.choose_folder(start_dir or os.path.expanduser("~/Desktop"))
-        return {"ok": True, "path": path or ""}
+        """Open native folder picker for export destination.
+
+        Uses webview's built-in create_file_dialog instead of NSOpenPanel.runModal()
+        to avoid blocking the JS bridge's event loop (which causes the promise to hang
+        and the browse button to permanently lock up after the first use).
+        """
+        import webview
+        try:
+            directory = start_dir or os.path.expanduser("~/Desktop")
+            result = webview.windows[0].create_file_dialog(
+                webview.FOLDER_DIALOG,
+                directory=directory,
+            )
+            path = result[0] if result else ""
+            return {"ok": True, "path": path}
+        except Exception:
+            # Fallback to BackupService.choose_folder if webview dialog is unavailable
+            from app.backup_service import BackupService
+            path = BackupService.choose_folder(directory)
+            return {"ok": True, "path": path or ""}
 
     # ── Backup ──────────────────────────────────────────
 
