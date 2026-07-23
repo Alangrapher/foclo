@@ -182,6 +182,12 @@ button, input, select, .nav-item, .card, .form-row, .btn-row, .todo-list, .recor
   white-space: normal;
   word-break: break-word;
 }
+/* Timer page today-records: allow subject to wrap */
+#page-timer .cell-subj {
+  max-width: 140px;
+  white-space: normal;
+  word-break: break-word;
+}
 #page-records .cell-desc {
   max-width: 260px;
   white-space: normal;

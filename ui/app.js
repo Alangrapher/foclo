@@ -49,7 +49,6 @@ let slots = [{index: 0, status: 'idle', subject_id: null, description: '', displ
 let todos = [];
 let records = [];
 let recordsFilter = 'today';
-let recordsView = 'table';  // 'table' | 'gallery'
 let compactIndex = 0;
 let weekStart = 'sun'; // 'sun' or 'mon'
 let minimizeToTray = true;
@@ -261,20 +260,25 @@ function bindStaticControls() {
   const exportPathEl = document.getElementById('export-path');
   // Restore saved export folder display on page load
   if (exportPathEl && exportFolder) exportPathEl.textContent = exportFolder;
-  if (exportBrowseBtn) exportBrowseBtn.addEventListener('click', async () => {
-    if (!window.pywebview || !window.pywebview.api) {
-      if (exportPathEl) exportPathEl.textContent = 'API not ready — please wait';
-      return;
-    }
-    try {
-      const result = await callApi(window.pywebview.api.choose_export_folder(exportFolder), 'Choose export folder');
-      if (result && result.ok && result.path) {
-        exportFolder = result.path;
-        safeStorage.set('alangrapher.exportFolder', exportFolder);
-        if (exportPathEl) exportPathEl.textContent = exportFolder;
+  if (exportBrowseBtn) {
+    exportBrowseBtn.addEventListener('click', async () => {
+      if (!window.pywebview || !window.pywebview.api) {
+        if (exportPathEl) exportPathEl.textContent = 'API not ready — please wait';
+        return;
       }
-    } catch (e) { /* user cancelled */ }
-  });
+      if (exportBrowseBtn.disabled) return; // prevent double-click
+      exportBrowseBtn.disabled = true;
+      try {
+        const result = await callApi(window.pywebview.api.choose_export_folder(exportFolder), 'Choose export folder');
+        if (result && result.ok && result.path) {
+          exportFolder = result.path;
+          safeStorage.set('alangrapher.exportFolder', exportFolder);
+          if (exportPathEl) exportPathEl.textContent = exportFolder;
+        }
+      } catch (e) { /* user cancelled */ }
+      finally { exportBrowseBtn.disabled = false; }
+    });
+  }
   const exportButton = document.querySelector('#page-export .btn-primary');
   if (exportButton) exportButton.addEventListener('click', async () => {
     if (isExporting) return;
@@ -412,7 +416,7 @@ function renderAll() {
   renderTimer();
   renderSubjects();
   renderTodos();
-  renderRecords();
+  renderGallery();
   renderSettings();
   renderCompact();
   if (compactRestorePending) {
@@ -972,32 +976,13 @@ function updateTodoCounter() {
 
 async function setRecordsFilter(filter) {
   recordsFilter = filter === 'Today' ? 'today' : filter === 'Week' ? 'week' : filter === 'Month' ? 'month' : 'all';
-  document.querySelectorAll('#page-records .chip:not(.view-chip)').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('#page-records .chip').forEach(c => c.classList.remove('active'));
   const labels = {Today: 'Today', Week: 'This Week', Month: 'This Month', All: 'All'};
-  document.querySelectorAll('#page-records .chip:not(.view-chip)').forEach(c => { if (c.textContent.trim() === labels[filter]) c.classList.add('active'); });
+  document.querySelectorAll('#page-records .chip').forEach(c => { if (c.textContent.trim() === labels[filter]) c.classList.add('active'); });
   const dateField = document.getElementById('recordsDateField');
   if (dateField) { dateField.style.display = recordsFilter === 'today' ? 'none' : ''; dateField.value = todayIso(); }
-  document.querySelector('#page-records .records-scroll-wrap').classList.toggle('showing-dates', recordsFilter !== 'today');
   if (window.pywebview && window.pywebview.api) await loadRecords();
-  if (recordsView === 'gallery') { renderGallery(); renderTodayRecords(); updateTiles(); return; }
-  renderRecords();
-}
-
-async function switchRecordsView(view) {
-  recordsView = view;
-  document.querySelectorAll('#page-records .view-chip').forEach(c => c.classList.remove('active'));
-  if (view === 'table') {
-    document.getElementById('viewTableChip').classList.add('active');
-    document.getElementById('galleryView').style.display = 'none';
-    document.getElementById('recordsTableView').style.display = '';
-    renderRecords();
-  } else {
-    document.getElementById('viewGalleryChip').classList.add('active');
-    document.getElementById('recordsTableView').style.display = 'none';
-    document.getElementById('galleryView').style.display = '';
-    renderGallery();
-  }
-  renderTodayRecords(); updateTiles();
+  renderGallery(); renderTodayRecords(); updateTiles();
 }
 
 function renderGallery() {
@@ -1112,30 +1097,48 @@ async function addRecord() {
   row.querySelector('.records-add-desc').value = '';
   row.querySelector('.records-add-start').value = '';
   row.querySelector('.records-add-end').value = '';
-  renderRecords(); renderTodayRecords(); updateTiles();
-}
-
-function renderRecords() {
-  const tbody = document.getElementById('recordsBody');
-  tbody.innerHTML = records.length ? records.map(r => `<tr data-id="${r.id}" data-date="${attr(r.date || todayIso())}" data-subject="${attr(r.subject_name || '—')}" data-desc="${attr(r.description || '—')}" data-dur="${attr(r.duration || '0m')}"${r.date === todayIso() ? ` ondblclick="fillRecordToSlot(${r.id})" title="Double-click to load into timer"` : ''}><td class="cell-date records-date-col">${esc(r.date || todayIso())}</td><td class="cell-subj">${esc(r.subject_name || '—')}</td><td class="cell-desc">${esc(r.description || '—')}</td><td class="cell-dur" style="text-align:right">${esc(r.duration || '0m')}</td><td><span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span></td></tr>`).join('') : '<tr><td colspan="5" class="empty-state table-empty">No records yet</td></tr>';
-  document.getElementById('recordsCount').textContent = records.length;
+  renderGallery(); renderTodayRecords(); updateTiles();
 }
 
 function editRecord(span) {
-  const tr = span.closest('tr, .grec-row');
-  // Gallery rows: switch to table view and trigger edit there
-  if (tr.matches('.grec-row')) {
-    const id = Number(tr.dataset.id);
-    switchRecordsView('table');
-    setTimeout(() => {
-      const tableRow = document.querySelector(`#recordsBody tr[data-id="${id}"]`);
-      if (tableRow) {
-        const editBtn = tableRow.querySelector('.act[title="Edit"]');
-        if (editBtn) editRecord(editBtn);
-      }
-    }, 150);
+  const row = span.closest('tr, .grec-row');
+  if (row.classList.contains('records-editing')) return;
+  row.classList.add('records-editing');
+  
+  // Gallery row: convert grec cells to edit inputs
+  if (row.matches('.grec-row')) {
+    const record = records.find(r => Number(r.id) === Number(row.dataset.id));
+    const currentSubjectId = record ? record.subject_id : null;
+    
+    // Subject: replace text with select
+    const subjCell = row.querySelector('.grec-subj');
+    subjCell.innerHTML = `<select>${subjects.map(s => `<option value="${s.id}"${Number(s.id) === Number(currentSubjectId) ? ' selected' : ''}>${esc(s.name)}</option>`).join('')}</select>`;
+    
+    // Description: replace text with input
+    const descCell = row.querySelector('.grec-desc');
+    descCell.innerHTML = `<input type="text" value="${attr(row.dataset.desc)}">`;
+    
+    // Time: extract HH:MM from start_iso/end_iso, replace with two time inputs
+    const startIso = record ? (record.start_iso || record.start_time || '') : '';
+    const endIso = record ? (record.end_iso || record.end_time || '') : '';
+    const startHHMM = startIso && startIso.includes('T') ? startIso.split('T')[1].substring(0, 5) : '';
+    const endHHMM = endIso && endIso.includes('T') ? endIso.split('T')[1].substring(0, 5) : '';
+    const timeCell = row.querySelector('.grec-time');
+    timeCell.innerHTML = `<input type="time" value="${startHHMM}" class="edit-start-time" style="width:80px">` +
+      `<span style="margin:0 2px;color:var(--muted)">–</span>` +
+      `<input type="time" value="${endHHMM}" class="edit-end-time" style="width:80px">`;
+    
+    // Duration: hide during edit
+    row.querySelector('.grec-dur').style.display = 'none';
+    
+    // Actions: save/cancel
+    row.querySelector('td:last-child, .grec-row > :last-child').innerHTML = 
+      '<span class="edit-actions-inline"><span class="act save" onclick="saveEdit(this)" title="Save">✓</span><span class="act cancel" onclick="cancelEdit(this)" title="Cancel">✕</span></span>';
     return;
   }
+  
+  // Table row: original logic (for Timer page today-records)
+  const tr = row;
   if (tr.classList.contains('records-editing')) return;
   tr.classList.add('records-editing');
   const dateCell = tr.querySelector('.cell-date');
@@ -1182,21 +1185,20 @@ async function saveEdit(span) {
       end_time: end
     }), 'Update record');
     if (!result.ok) {
-      renderRecords(); renderTodayRecords();
+      renderGallery(); renderTodayRecords();
       return;
     }
     await loadRecords();
-    if (recordsView === 'gallery') { renderGallery(); renderTodayRecords(); updateTiles(); return; }
-    renderRecords(); renderTodayRecords(); updateTiles();
+    renderGallery(); renderTodayRecords(); updateTiles();
     return;
   }
   Object.assign(tr.dataset, {date, subject: selectedSubject ? selectedSubject.name : subjectSelect.options[subjectSelect.selectedIndex]?.text || '—', desc, dur: '0h'});
   const r = records.find(x => Number(x.id) === Number(tr.dataset.id));
   if (r) Object.assign(r, {date: tr.dataset.date, subject_id: subjectId, subject_name: tr.dataset.subject, description: tr.dataset.desc, duration: tr.dataset.dur});
-  renderRecords(); renderTodayRecords(); updateTiles();
+  renderGallery(); renderTodayRecords(); updateTiles();
 }
 
-function cancelEdit() { renderRecords(); renderTodayRecords(); }
+function cancelEdit() { renderGallery(); renderTodayRecords(); }
 
 async function delRecord(span) {
   const id = Number(span.closest('tr, .grec-row').dataset.id);
@@ -1206,8 +1208,7 @@ async function delRecord(span) {
     await loadRecords();
   }
   else records = records.filter(r => Number(r.id) !== id);
-  if (recordsView === 'gallery') { renderGallery(); renderTodayRecords(); updateTiles(); return; }
-  renderRecords(); renderTodayRecords(); updateTiles();
+  renderGallery(); renderTodayRecords(); updateTiles();
 }
 
 async function addSubject() {

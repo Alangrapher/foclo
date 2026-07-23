@@ -123,10 +123,10 @@ class TimerEngine:
         conn = get_conn()
         try:
             if resume_record_id:
-                # Resume mode: UPDATE the original record, accumulate time
+                # Resume mode: UPDATE the original record, accumulate time + overwrite description
                 cur = conn.execute(
-                    "UPDATE records SET end_time=?, duration_s=duration_s+? WHERE id=?",
-                    (end, int(total_s), resume_record_id),
+                    "UPDATE records SET end_time=?, duration_s=duration_s+?, description=? WHERE id=?",
+                    (end, int(total_s), description, resume_record_id),
                 )
                 if cur.rowcount == 0:
                     # Original record was deleted — fall back to INSERT
@@ -180,9 +180,21 @@ class TimerEngine:
 
     def set_resume_record(self, index: int, record_id: int):
         """Mark this slot as resuming an existing record.
-        When archived, the time will accumulate onto the original record."""
+        When archived, the time will accumulate onto the original record.
+        Also loads the record's duration_s into elapsed_s so the timer
+        display shows accumulated time from the original record."""
         with self._lock:
             self.slots[index].resume_record_id = record_id
+            # Load original duration and set as elapsed base
+            conn = get_conn()
+            try:
+                row = conn.execute(
+                    "SELECT duration_s FROM records WHERE id=?", (record_id,)
+                ).fetchone()
+                if row and row["duration_s"]:
+                    self.slots[index].elapsed_s = row["duration_s"]
+            finally:
+                conn.close()
 
     def update_slot_metadata(
         self,
