@@ -30,6 +30,25 @@ def _make_icon_image(active: bool) -> Image.Image:
     return img
 
 
+def _check_active_windows() -> bool:
+    """True if any timer slot has meaningful state (running, paused, or elapsed time).
+    Read-only DB query — does NOT instantiate TimerEngine.
+    """
+    import sqlite3
+    try:
+        from app.storage import get_db_path
+        conn = sqlite3.connect(get_db_path())
+        try:
+            row = conn.execute(
+                "SELECT 1 FROM slot_state WHERE status IN ('running','paused') OR elapsed_s > 0 LIMIT 1"
+            ).fetchone()
+            return row is not None
+        finally:
+            conn.close()
+    except Exception:
+        return True  # fail-safe: show dialog if we can't check
+
+
 class WindowsTray:
     """Windows system tray — minimize to notification area.
 
@@ -77,7 +96,10 @@ class WindowsTray:
             self.window.show()
 
     def _quit_app(self, _icon=None, _item=None):
-        """Show quit dialog in a fresh thread to avoid pystray event-loop deadlock."""
+        """Show quit dialog only when timers are active. Quit directly otherwise."""
+        if not _check_active_windows():
+            self._exit_direct()
+            return
         import threading
         threading.Thread(target=self._quit_dialog_thread, daemon=True).start()
 
@@ -106,6 +128,11 @@ class WindowsTray:
         elif result == IDNO:
             self._exit_after(archive_first=False)
         # Cancel → do nothing
+
+    def _exit_direct(self):
+        """Exit immediately without any dialog (all slots idle)."""
+        import os
+        os._exit(0)
 
     def _exit_after(self, archive_first):
         """Archive or pause all active slots, then exit."""
