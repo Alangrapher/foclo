@@ -1,107 +1,61 @@
-name: Build Windows
+name: Build Windows Installer
 
 on:
   push:
-    branches: [main]
-    paths-ignore:
-      - 'Alangrapher.spec'       # macOS packaging only
-      - 'AppIcon.icns'           # icon changes
-      - 'README.md'              # docs
-      - '.gitignore'
     tags:
-      - 'win-v*'                 # trigger release on win version tags
+      - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. v1.0.2)'
+        required: true
+        default: 'v1.0.1'
 
 jobs:
   build:
     runs-on: windows-latest
-    permissions:
-      contents: write      # needed for softprops/action-gh-release
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.12'
+          cache: 'pip'
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install "pywebview>=5.0,<6.0" pyinstaller openpyxl pystray Pillow
+        run: pip install -r requirements-windows.txt
 
-      - name: Build release exe (no console)
-        run: |
-          pyinstaller `
-            --onefile `
-            --windowed `
-            --name Alangrapher `
-            --add-data "ui;ui" `
-            --hidden-import webview.platforms.edgechromium `
-            --hidden-import webview.platforms.winforms `
-            main.py
+      - name: Install Inno Setup
+        run: choco install innosetup --version=6.3.1 -y --no-progress
 
-      - name: Build debug exe (with console)
-        run: |
-          pyinstaller `
-            --onefile `
-            --console `
-            --name Alangrapher-debug `
-            --add-data "ui;ui" `
-            --hidden-import webview.platforms.edgechromium `
-            --hidden-import webview.platforms.winforms `
-            main.py
-
-      - name: Download WebView2 Evergreen Bootstrapper
-        run: |
-          Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/p/?LinkId=2124703" `
-            -OutFile "MicrosoftEdgeWebview2Setup.exe"
-
-      - name: Extract version from tag
+      - name: Extract version
         id: version
-        if: startsWith(github.ref, 'refs/tags/win-v')
         shell: pwsh
         run: |
-          $ver = "${{ github.ref_name }}" -replace '^win-v', ''
+          $ref = "${{ github.ref }}"
+          if ($ref -match 'refs/tags/v(.+)') {
+            $ver = $matches[1]
+          } else {
+            $ver = "${{ github.event.inputs.version }}" -replace '^v', ''
+          }
           echo "version=$ver" >> $env:GITHUB_OUTPUT
 
-      - name: Build installer (Inno Setup)
+      - name: Build with PyInstaller
+        run: pyinstaller Foclo-windows.spec
+
+      - name: Build installer with Inno Setup
+        shell: pwsh
         run: |
-          $ver = if ("${{ steps.version.outputs.version }}") { "${{ steps.version.outputs.version }}" } else { "0.0.0-dev" }
-          iscc /DVersion=$ver installer.iss
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          & $iscc /DVersion=${{ steps.version.outputs.version }} installer.iss
 
-      - name: Upload release artifact
-        uses: actions/upload-artifact@v4
-        if: github.ref_type != 'tag'
-        with:
-          name: Alangrapher-Windows
-          path: |
-            dist/Alangrapher.exe
-            dist/Alangrapher-debug.exe
-            dist/Alangrapher-Setup-*.exe
-
-      - name: Create GitHub Release
+      - name: Upload installer to Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/win-v')
         with:
-          name: "Windows ${{ github.ref_name }}"
-          body: |
-            ## Windows ${{ github.ref_name }}
-
-            ### Recommended: Installer
-            Download `Alangrapher-Setup-*.exe` — double-click to install. It will automatically install the WebView2 runtime if needed.
-
-            ### Alternative: Portable
-            `Alangrapher.exe` — no install, just run. **Requires Microsoft Edge WebView2 Runtime** ([download](https://go.microsoft.com/fwlink/p/?LinkId=2124703) if you see a blank window).
-
-            `Alangrapher-debug.exe` — same as above but with a console window for troubleshooting.
-
-            ### Changes
-            See [full changelog](https://github.com/Alangrapher/foclo/commits/main).
-          files: |
-            dist/Alangrapher-Setup-*.exe
-            dist/Alangrapher.exe
-            dist/Alangrapher-debug.exe
-          draft: false
-          prerelease: false
+          files: dist/Foclo-Setup-${{ steps.version.outputs.version }}.exe
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
