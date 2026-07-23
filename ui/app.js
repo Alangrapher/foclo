@@ -1059,6 +1059,9 @@ function renderDayCard(date, dayRecords, dayTotalS, subjectTotals) {
     </div>`;
   }).join('');
   
+  // Build Gantt strip
+  const ganttStrip = renderGanttStrip(dayRecords, date);
+  
   return `<div class="gallery-card">
     <div class="gcard-header">
       <span class="gcard-date">${date}</span>
@@ -1071,7 +1074,73 @@ function renderDayCard(date, dayRecords, dayTotalS, subjectTotals) {
         ${subjectNames.map(sn => `<span class="glegend-item"><span class="glegend-dot" style="background:${subjectTotals[sn].color}"></span>${esc(sn)} ${(subjectTotals[sn].total_s/3600).toFixed(1)}h</span>`).join('')}
       </div>
     </div>
+    ${ganttStrip}
     <div class="gcard-records">${recordRows}</div>
+  </div>`;
+}
+
+function renderGanttStrip(dayRecords, date) {
+  // Parse records with valid start_iso for positioning
+  const positioned = dayRecords.map(r => {
+    const iso = r.start_iso || '';
+    if (!iso || !iso.includes('T')) return null;
+    const timePart = iso.split('T')[1];
+    const [h, m, s] = timePart.split(':').map(Number);
+    const secFromMidnight = h * 3600 + m * 60 + (s || 0);
+    const dur = r.duration_s || 0;
+    const subj = subjectById(r.subject_id);
+    return { ...r, secFromMidnight, dur, color: subj ? subj.color : '#5E6AD2' };
+  }).filter(Boolean).sort((a, b) => a.secFromMidnight - b.secFromMidnight);
+  
+  if (positioned.length === 0) return '';
+  
+  // Overlap assignment: greedy row allocation (max 3 visible rows)
+  const rows = [[], [], []]; // row[i] = [{end_sec, ...}, ...]
+  let overflowCount = 0;
+  
+  positioned.forEach(rec => {
+    const endSec = rec.secFromMidnight + rec.dur;
+    let placed = false;
+    for (let rowIdx = 0; rowIdx < 3; rowIdx++) {
+      const last = rows[rowIdx][rows[rowIdx].length - 1];
+      if (!last || last.endSec <= rec.secFromMidnight) {
+        rows[rowIdx].push({ ...rec, endSec, rowIdx });
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      overflowCount++;
+      rows[2].push({ ...rec, endSec, rowIdx: 2 });
+    }
+  });
+  
+  // Build hour markers
+  const hourMarkers = [0, 6, 12, 18, 24].map(h => 
+    `<span class="gantt-hour" style="left:${(h/24*100).toFixed(1)}%">${h}h</span>`
+  ).join('');
+  
+  // Build bars
+  const totalSec = 86400;
+  const allBars = [];
+  for (let ri = 0; ri < 3; ri++) {
+    rows[ri].forEach(rec => {
+      const left = Math.max((rec.secFromMidnight / totalSec * 100), 0);
+      const width = Math.max((rec.dur / totalSec * 100), 0.5);
+      allBars.push(`<div class="gantt-bar" style="left:${left.toFixed(2)}%;width:${width.toFixed(2)}%;top:${ri*13}px;background:${rec.color}" title="${esc(rec.subject_name)} ${rec.start}–${rec.end} (${rec.duration})"></div>`);
+    });
+  }
+  
+  // Overflow indicator
+  const overflow = overflowCount > 0 ? `<span class="gantt-overflow" style="top:${2*13}px">+${overflowCount}</span>` : '';
+  
+  const hasRecords = allBars.length > 0;
+  return `<div class="gcard-gantt">
+    <div class="gantt-ticks">${hourMarkers}</div>
+    <div class="gantt-strip" style="height:${Math.min(3, rows.filter(r => r.length > 0).length) * 13 + 4}px">
+      ${hasRecords ? allBars.join('') : '<span class="gantt-empty">No timed records</span>'}
+      ${overflow}
+    </div>
   </div>`;
 }
 

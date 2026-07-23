@@ -53,6 +53,7 @@ def get_records(filter: str = "today", week_start: str = "mon") -> list[dict]:
             "start_iso": r["start_time"] or "",
             "end_iso": r["end_time"] or "",
             "duration": fmt_dur(r["duration_s"]),
+            "duration_s": r["duration_s"] or 0,
             "date": (r["start_time"] or r["created_at"] or "")[:10],
         }
         for r in rows
@@ -153,3 +154,41 @@ def delete_record(record_id: int) -> dict:
     finally:
         conn.close()
     return {"ok": True}
+
+
+def get_records_by_date_range(start_date: str, end_date: str) -> list[dict]:
+    """Return all records between start_date and end_date (inclusive),
+    with full ISO timestamps (start_iso, end_iso)."""
+    conn = get_conn()
+    try:
+        rows = conn.execute(
+            """SELECT r.id, r.subject_id, s.name as subject_name, r.description,
+                      r.start_time, r.end_time, r.duration_s
+               FROM records r LEFT JOIN subjects s ON r.subject_id=s.id
+               WHERE date(r.start_time) >= ? AND date(r.start_time) <= ?
+               ORDER BY r.start_time ASC""",
+            (start_date, end_date),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    def fmt_dur(sec: int) -> str:
+        h = sec / 3600
+        return f"{h:.1f}h"
+
+    return [
+        {
+            "id": r["id"],
+            "subject_id": r["subject_id"],
+            "subject_name": r["subject_name"] or "—",
+            "description": r["description"],
+            "start": (r["start_time"] or "")[-8:-3] if r["start_time"] else "",
+            "end": (r["end_time"] or "")[-8:-3] if r["end_time"] else "",
+            "start_iso": r["start_time"] or "",
+            "end_iso": r["end_time"] or "",
+            "duration": fmt_dur(r["duration_s"]),
+            "duration_s": r["duration_s"],
+            "date": (r["start_time"] or "")[:10],
+        }
+        for r in rows
+    ]

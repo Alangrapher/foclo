@@ -251,6 +251,10 @@ class Api:
     def get_records(self, filter: str = "today", week_start: str = "mon"):
         return get_records(filter, week_start)
 
+    def get_records_by_date_range(self, start_date: str, end_date: str):
+        from app.record_service import get_records_by_date_range
+        return get_records_by_date_range(start_date, end_date)
+
     def add_record(self, subject_id: int, description: str, start_time: str, end_time: str):
         return add_record(subject_id, description, start_time, end_time)
 
