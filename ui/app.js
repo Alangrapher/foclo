@@ -49,6 +49,7 @@ let slots = [{index: 0, status: 'idle', subject_id: null, description: '', displ
 let todos = [];
 let records = [];
 let recordsFilter = 'today';
+let recordsView = 'table';  // 'table' | 'gallery'
 let compactIndex = 0;
 let weekStart = 'sun'; // 'sun' or 'mon'
 let minimizeToTray = true;
@@ -971,14 +972,122 @@ function updateTodoCounter() {
 
 async function setRecordsFilter(filter) {
   recordsFilter = filter === 'Today' ? 'today' : filter === 'Week' ? 'week' : filter === 'Month' ? 'month' : 'all';
-  document.querySelectorAll('#page-records .chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('#page-records .chip:not(.view-chip)').forEach(c => c.classList.remove('active'));
   const labels = {Today: 'Today', Week: 'This Week', Month: 'This Month', All: 'All'};
-  document.querySelectorAll('#page-records .chip').forEach(c => { if (c.textContent.trim() === labels[filter]) c.classList.add('active'); });
+  document.querySelectorAll('#page-records .chip:not(.view-chip)').forEach(c => { if (c.textContent.trim() === labels[filter]) c.classList.add('active'); });
   const dateField = document.getElementById('recordsDateField');
   if (dateField) { dateField.style.display = recordsFilter === 'today' ? 'none' : ''; dateField.value = todayIso(); }
   document.querySelector('#page-records .records-scroll-wrap').classList.toggle('showing-dates', recordsFilter !== 'today');
   if (window.pywebview && window.pywebview.api) await loadRecords();
+  if (recordsView === 'gallery') { renderGallery(); renderTodayRecords(); updateTiles(); return; }
   renderRecords();
+}
+
+async function switchRecordsView(view) {
+  recordsView = view;
+  document.querySelectorAll('#page-records .view-chip').forEach(c => c.classList.remove('active'));
+  if (view === 'table') {
+    document.getElementById('viewTableChip').classList.add('active');
+    document.getElementById('galleryView').style.display = 'none';
+    document.getElementById('recordsTableView').style.display = '';
+    renderRecords();
+  } else {
+    document.getElementById('viewGalleryChip').classList.add('active');
+    document.getElementById('recordsTableView').style.display = 'none';
+    document.getElementById('galleryView').style.display = '';
+    renderGallery();
+  }
+  renderTodayRecords(); updateTiles();
+}
+
+function renderGallery() {
+  const gallery = document.getElementById('galleryView');
+  // Group records by date
+  const byDate = {};
+  records.forEach(r => {
+    const d = r.date || '';
+    if (!byDate[d]) byDate[d] = [];
+    byDate[d].push(r);
+  });
+  const dates = Object.keys(byDate).sort().reverse(); // newest first
+  
+  if (dates.length === 0) {
+    gallery.innerHTML = '<div class="empty-state">No records yet</div>';
+    document.getElementById('recordsCount').textContent = '0';
+    return;
+  }
+  
+  document.getElementById('recordsCount').textContent = records.length;
+  
+  gallery.innerHTML = dates.map(date => {
+    const dayRecords = byDate[date];
+    // Calculate total duration and per-subject durations
+    const subjectTotals = {}; // {subject_name: {total_s, color}}
+    let dayTotalS = 0;
+    dayRecords.forEach(r => {
+      const dur = (r.duration_s || 0);
+      dayTotalS += dur;
+      const sn = r.subject_name || '—';
+      if (!subjectTotals[sn]) {
+        subjectTotals[sn] = { total_s: 0, color: '' };
+      }
+      subjectTotals[sn].total_s += dur;
+      // Look up color from subjects array
+      const subj = subjectById(r.subject_id);
+      if (subj) subjectTotals[sn].color = subj.color || '#5E6AD2';
+    });
+    
+    return renderDayCard(date, dayRecords, dayTotalS, subjectTotals);
+  }).join('');
+}
+
+function renderDayCard(date, dayRecords, dayTotalS, subjectTotals) {
+  const dayH = (dayTotalS / 3600).toFixed(1);
+  const dateObj = new Date(date + 'T00:00:00');
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const dayName = days[dateObj.getDay()];
+  
+  // Build subject color bar
+  const subjectNames = Object.keys(subjectTotals);
+  const barSegments = subjectNames.map(sn => {
+    const st = subjectTotals[sn];
+    const pct = dayTotalS > 0 ? Math.max((st.total_s / dayTotalS * 100), 2) : 0;
+    return `<span class="sb-seg" style="flex:${pct.toFixed(0)} 0 0;background:${st.color}" title="${esc(sn)}: ${(st.total_s/3600).toFixed(1)}h"></span>`;
+  }).join('');
+  
+  // Build record rows
+  const recordRows = dayRecords.map(r => {
+    const start = r.start || '—';
+    const end = r.end || '—';
+    const dur = r.duration || '0h';
+    const subjName = r.subject_name || '—';
+    const desc = r.description || '—';
+    const subj = subjectById(r.subject_id);
+    const dotColor = subj ? subj.color : '#5E6AD2';
+    return `<div class="grec-row" data-id="${r.id}" data-date="${attr(date)}" data-subject="${attr(subjName)}" data-desc="${attr(desc)}" data-dur="${attr(dur)}"${r.date === todayIso() ? ` ondblclick="fillRecordToSlot(${r.id})" title="Double-click to load into timer"` : ''}>
+      <span class="grec-dot" style="background:${dotColor}"></span>
+      <span class="grec-time">${start}–${end}</span>
+      <span class="grec-subj">${esc(subjName)}</span>
+      <span class="grec-desc">${esc(desc)}</span>
+      <span class="grec-dur">${esc(dur)}</span>
+      <span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span>
+    </div>`;
+  }).join('');
+  
+  return `<div class="gallery-card">
+    <div class="gcard-header">
+      <span class="gcard-date">${date}</span>
+      <span class="gcard-day">${dayName}</span>
+      <span class="gcard-total">${dayH}h</span>
+    </div>
+    <div class="gcard-bar">
+      <div class="gcard-bar-inner">${barSegments}</div>
+      <div class="gcard-legend">
+        ${subjectNames.map(sn => `<span class="glegend-item"><span class="glegend-dot" style="background:${subjectTotals[sn].color}"></span>${esc(sn)} ${(subjectTotals[sn].total_s/3600).toFixed(1)}h</span>`).join('')}
+      </div>
+    </div>
+    <div class="gcard-records">${recordRows}</div>
+  </div>`;
 }
 
 async function addRecord() {
@@ -986,16 +1095,23 @@ async function addRecord() {
   const subjName = row.querySelector('.records-add-subject').value;
   const subj = subjects.find(s => s.name === subjName) || subjects[0];
   const desc = row.querySelector('.records-add-desc').value.trim() || '—';
-  const dur = row.querySelector('.records-add-duration').value.trim() || '0m';
+  const startTime = row.querySelector('.records-add-start').value;
+  const endTime = row.querySelector('.records-add-end').value;
   const date = document.getElementById('recordsDateField').value || todayIso();
+  if (!startTime || !endTime) {
+    alert('Please enter both start and end time.');
+    return;
+  }
+  const start = `${date}T${startTime}:00`;
+  const end = `${date}T${endTime}:00`;
   if (window.pywebview && window.pywebview.api) {
-    const {start, end} = recordRangeFromDuration(date, dur);
     const result = await callApi(window.pywebview.api.add_record(subj ? subj.id : 1, desc, start, end), 'Add record');
     if (!result || result.ok === false) return;
     await loadRecords();
-  } else records.unshift({id: Date.now(), subject_id: subj?.id, subject_name: subjName, description: desc, duration: dur, date});
+  } else records.unshift({id: Date.now(), subject_id: subj?.id, subject_name: subjName, description: desc, duration: '0h', date});
   row.querySelector('.records-add-desc').value = '';
-  row.querySelector('.records-add-duration').value = '';
+  row.querySelector('.records-add-start').value = '';
+  row.querySelector('.records-add-end').value = '';
   renderRecords(); renderTodayRecords(); updateTiles();
 }
 
@@ -1006,7 +1122,20 @@ function renderRecords() {
 }
 
 function editRecord(span) {
-  const tr = span.closest('tr');
+  const tr = span.closest('tr, .grec-row');
+  // Gallery rows: switch to table view and trigger edit there
+  if (tr.matches('.grec-row')) {
+    const id = Number(tr.dataset.id);
+    switchRecordsView('table');
+    setTimeout(() => {
+      const tableRow = document.querySelector(`#recordsBody tr[data-id="${id}"]`);
+      if (tableRow) {
+        const editBtn = tableRow.querySelector('.act[title="Edit"]');
+        if (editBtn) editRecord(editBtn);
+      }
+    }, 150);
+    return;
+  }
   if (tr.classList.contains('records-editing')) return;
   tr.classList.add('records-editing');
   const dateCell = tr.querySelector('.cell-date');
@@ -1015,21 +1144,36 @@ function editRecord(span) {
   const currentSubjectId = record ? record.subject_id : null;
   tr.querySelector('.cell-subj').innerHTML = `<select>${subjects.map(s => `<option value="${s.id}"${Number(s.id) === Number(currentSubjectId) || (!currentSubjectId && s.name === tr.dataset.subject) ? ' selected' : ''}>${esc(s.name)}</option>`).join('')}</select>`;
   tr.querySelector('.cell-desc').innerHTML = `<input type="text" value="${attr(tr.dataset.desc)}">`;
-  tr.querySelector('.cell-dur').innerHTML = `<input type="text" value="${(tr.dataset.dur || '0').replace(/h$/, '')}" placeholder="e.g. 1.5" style="width:80px">`;
+  // Extract HH:MM from ISO timestamps for time inputs
+  const startIso = record ? (record.start_iso || record.start_time || '') : '';
+  const endIso = record ? (record.end_iso || record.end_time || '') : '';
+  const startHHMM = startIso && startIso.includes('T') ? startIso.split('T')[1].substring(0, 5) : '';
+  const endHHMM = endIso && endIso.includes('T') ? endIso.split('T')[1].substring(0, 5) : '';
+  tr.querySelector('.cell-dur').innerHTML =
+    `<input type="time" value="${startHHMM}" class="edit-start-time" style="width:85px">` +
+    `<span style="margin:0 4px;color:var(--muted)">–</span>` +
+    `<input type="time" value="${endHHMM}" class="edit-end-time" style="width:85px">`;
   tr.querySelector('td:last-child').innerHTML = '<span class="edit-actions-inline"><span class="act save" onclick="saveEdit(this)" title="Save">✓</span><span class="act cancel" onclick="cancelEdit(this)" title="Cancel">✕</span></span>';
 }
 
 async function saveEdit(span) {
   const tr = span.closest('tr');
-  const durSeconds = parseDurationS(tr.querySelector('.cell-dur input').value);
-  const dur = (durSeconds / 3600).toFixed(1) + 'h';
+  const startInput = tr.querySelector('.edit-start-time');
+  const endInput = tr.querySelector('.edit-end-time');
   const dateInput = tr.querySelector('.cell-date input');
-  const date = dateInput ? dateInput.value : tr.dataset.date;
+  const date = dateInput ? dateInput.value : tr.dataset.date || todayIso();
   const subjectSelect = tr.querySelector('.cell-subj select');
   const subjectId = Number(subjectSelect.value) || null;
   const selectedSubject = subjectById(subjectId);
   const desc = tr.querySelector('.cell-desc input').value;
-  const {start, end} = recordRangeFromDuration(date, dur);
+  let start, end;
+  if (startInput && endInput && startInput.value && endInput.value) {
+    start = `${date}T${startInput.value}:00`;
+    end = `${date}T${endInput.value}:00`;
+  } else {
+    const fallback = recordRangeFromDuration(date, '0h');
+    start = fallback.start; end = fallback.end;
+  }
   if (window.pywebview && window.pywebview.api) {
     const result = await callApi(window.pywebview.api.update_record(Number(tr.dataset.id), {
       subject_id: subjectId,
@@ -1042,10 +1186,11 @@ async function saveEdit(span) {
       return;
     }
     await loadRecords();
+    if (recordsView === 'gallery') { renderGallery(); renderTodayRecords(); updateTiles(); return; }
     renderRecords(); renderTodayRecords(); updateTiles();
     return;
   }
-  Object.assign(tr.dataset, {date, subject: selectedSubject ? selectedSubject.name : subjectSelect.options[subjectSelect.selectedIndex]?.text || '—', desc, dur});
+  Object.assign(tr.dataset, {date, subject: selectedSubject ? selectedSubject.name : subjectSelect.options[subjectSelect.selectedIndex]?.text || '—', desc, dur: '0h'});
   const r = records.find(x => Number(x.id) === Number(tr.dataset.id));
   if (r) Object.assign(r, {date: tr.dataset.date, subject_id: subjectId, subject_name: tr.dataset.subject, description: tr.dataset.desc, duration: tr.dataset.dur});
   renderRecords(); renderTodayRecords(); updateTiles();
@@ -1054,13 +1199,14 @@ async function saveEdit(span) {
 function cancelEdit() { renderRecords(); renderTodayRecords(); }
 
 async function delRecord(span) {
-  const id = Number(span.closest('tr').dataset.id);
+  const id = Number(span.closest('tr, .grec-row').dataset.id);
   if (window.pywebview && window.pywebview.api) {
     const result = await callApi(window.pywebview.api.delete_record(id), 'Delete record');
     if (!result || result.ok === false) return;
     await loadRecords();
   }
   else records = records.filter(r => Number(r.id) !== id);
+  if (recordsView === 'gallery') { renderGallery(); renderTodayRecords(); updateTiles(); return; }
   renderRecords(); renderTodayRecords(); updateTiles();
 }
 

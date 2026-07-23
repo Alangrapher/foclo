@@ -50,6 +50,8 @@ def get_records(filter: str = "today", week_start: str = "mon") -> list[dict]:
             "description": r["description"],
             "start": (r["start_time"] or "")[-8:-3] if r["start_time"] else "",
             "end": (r["end_time"] or "")[-8:-3] if r["end_time"] else "",
+            "start_iso": r["start_time"] or "",
+            "end_iso": r["end_time"] or "",
             "duration": fmt_dur(r["duration_s"]),
             "date": (r["start_time"] or r["created_at"] or "")[:10],
         }

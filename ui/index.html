@@ -145,6 +145,9 @@
             <span class="chip" onclick="setRecordsFilter('Week')">This Week</span>
             <span class="chip" onclick="setRecordsFilter('Month')">This Month</span>
             <span class="chip" onclick="setRecordsFilter('All')">All</span>
+            <span style="margin-left:12px;color:var(--border)">|</span>
+            <span class="chip view-chip active" id="viewTableChip" onclick="switchRecordsView('table')">Table</span>
+            <span class="chip view-chip" id="viewGalleryChip" onclick="switchRecordsView('gallery')">Gallery</span>
           </div>
         </div>
         <!-- Inline add form row -->
@@ -154,10 +157,14 @@
             <option>Code Review</option><option>Design System</option><option>Documentation</option><option>Meeting</option><option>Research</option>
           </select>
           <input type="text" class="records-add-desc" placeholder="Description" style="flex:1.3;">
-          <input type="text" class="records-add-duration" placeholder="Duration (e.g. 1.5h)" style="flex:0.6;">
+          <input type="time" class="records-add-start" placeholder="Start" style="flex:0 0 80px;">
+          <input type="time" class="records-add-end" placeholder="End" style="flex:0 0 80px;">
           <button class="btn btn-primary btn-sm" onclick="addRecord()" style="padding:4px 10px;font-size:11px;border-radius:6px;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3v5a1 1 0 0 0 1 1h5"/><path d="M18 15v6"/><path d="M21 12.356V9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7.355"/><path d="M21 18h-6"/></svg></button>
         </div>
-        <div class="records-scroll-wrap">
+        <!-- Gallery view (by date cards) -->
+        <div class="gallery-view" id="galleryView" style="display:none;"></div>
+        <!-- Table view -->
+        <div class="records-scroll-wrap" id="recordsTableView">
         <table class="records-table">
             <thead><tr><th class="records-date-col">Date</th><th>Subject</th><th>Description</th><th style="text-align:right">Duration</th><th style="width:60px"></th></tr></thead>
             <tbody id="recordsBody"></tbody>
