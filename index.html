@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Alangrapher</title>
+<title>Foclo</title>
 <style>
 
 /* ═══════════════════════════════════════════════════════════
@@ -482,7 +482,7 @@ html.dark .window { border-color: #30363D; box-shadow: 0 12px 48px rgba(0,0,0,0.
 
     <!-- Sidebar -->
     <aside class="sidebar">
-      <div class="sidebar-brand">Alangrapher</div>
+      <div class="sidebar-brand">Foclo</div>
       <nav style="display:flex;flex-direction:column;gap:1px;flex:1;">
         <div class="nav-item active" data-page="timer">
           <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></svg>
@@ -701,11 +701,11 @@ html.dark .window { border-color: #30363D; box-shadow: 0 12px 48px rgba(0,0,0,0.
             <select class="form-select" style="width:80px;"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Auto Backup</div><div class="setting-desc">Hourly backup to ~/Documents/Alangrapher/backups/</div></div>
+            <div class="setting-info"><div class="setting-label">Auto Backup</div><div class="setting-desc">Hourly backup to ~/Documents/Foclo/backups/</div></div>
             <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Backup Location</div><div class="setting-desc">~/Documents/Alangrapher/backups/</div></div>
+            <div class="setting-info"><div class="setting-label">Backup Location</div><div class="setting-desc">~/Documents/Foclo/backups/</div></div>
             <button class="btn btn-secondary btn-sm">Choose…</button>
           </div>
           <div class="setting-row">
@@ -747,8 +747,8 @@ html.dark .window { border-color: #30363D; box-shadow: 0 12px 48px rgba(0,0,0,0.
 <div class="modal-overlay" id="easterEggModal">
   <div class="modal-card">
     <div class="modal-accent"></div>
-    <div class="modal-title">《Alangrapher 计时准则》</div>
-    <div class="modal-subtitle">The Alangrapher's Code of Timing</div>
+    <div class="modal-title">《Foclo 计时准则》</div>
+    <div class="modal-subtitle">The Foclo's Code of Timing</div>
     <div class="modal-quote">"时间不会说谎。"</div>
     <div class="modal-quote-en">"Time tells no lie."</div>
     <div class="modal-divider"></div>
@@ -817,7 +817,7 @@ darkToggle.addEventListener('click', () => {
       darkToggle.style.borderColor = '#cc2200';
     } else {
       root.classList.remove('moss');
-      document.querySelector('.topbar-title').textContent = 'Alangrapher — 760×620';
+      document.querySelector('.topbar-title').textContent = 'Foclo — 760×620';
       _updateDarkBtn();
       darkToggle.style.color = '';
       darkToggle.style.borderColor = '';

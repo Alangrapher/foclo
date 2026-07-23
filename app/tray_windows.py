@@ -60,13 +60,13 @@ class WindowsTray:
         menu = pystray.Menu(
             pystray.MenuItem("Show Window", self._show_window, default=True),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("Quit Alangrapher", self._quit_app),
+            pystray.MenuItem("Quit Foclo", self._quit_app),
         )
 
         self._icon = pystray.Icon(
-            "alangrapher",
+            "foclo",
             image,
-            "Alangrapher",
+            "Foclo",
             menu=menu,
         )
 
@@ -97,7 +97,7 @@ class WindowsTray:
             "是(Y) = Archive all & quit\n"
             "否(N) = Pause all & quit\n"
             "取消   = Cancel",
-            "Quit Alangrapher",
+            "Quit Foclo",
             MB_YESNOCANCEL | MB_ICONWARNING,
         )
 

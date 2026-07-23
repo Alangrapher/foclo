@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Alangrapher · Liquid Glass (760×620)</title>
+<title>Foclo · Liquid Glass (760×620)</title>
 <!-- INLINE_CSS -->
 </head>
 <body>
@@ -12,7 +12,7 @@
 
     <!-- Sidebar -->
     <aside class="sidebar">
-      <div class="sidebar-brand">Alangrapher</div>
+      <div class="sidebar-brand">Foclo</div>
       <nav style="display:flex;flex-direction:column;gap:1px;flex:1;">
         <div class="nav-item active" data-page="timer">
           <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></svg>
@@ -36,6 +36,7 @@
       <div class="sidebar-footer">
         <button class="theme-toggle" id="darkToggle"><svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 5h4"/><path d="M20 3v4"/><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg> Dark</button>
         <div class="sidebar-tagline easter-egg-trigger" id="easterEggTrigger">Code of Timing</div>
+        <div class="sidebar-version">v1.0</div>
       </div>
     </aside>
 
@@ -219,11 +220,11 @@
             <select class="form-select" id="defaultSlotsSelect" style="width:80px;"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Auto Backup</div><div class="setting-desc" id="backupDesc">Hourly backup to ~/Documents/Alangrapher/backups/</div></div>
+            <div class="setting-info"><div class="setting-label">Auto Backup</div><div class="setting-desc" id="backupDesc">Hourly backup to ~/Documents/Foclo/backups/</div></div>
             <label class="toggle"><input type="checkbox" id="autoBackupToggle" checked><span class="toggle-slider"></span></label>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Backup Location</div><div class="setting-desc" id="backupPath">~/Documents/Alangrapher/backups/</div></div>
+            <div class="setting-info"><div class="setting-label">Backup Location</div><div class="setting-desc" id="backupPath">~/Documents/Foclo/backups/</div></div>
             <button class="btn btn-secondary btn-sm" id="chooseBackupBtn">Choose…</button>
           </div>
           <div class="setting-row" id="minimizeTrayRow">
@@ -305,7 +306,7 @@
 <!-- Quit confirmation modal -->
 <div class="modal-overlay" id="quitConfirmModal">
   <div class="modal-card" style="width:360px;text-align:center;">
-    <div class="modal-title" style="font-size:16px;margin-bottom:12px;">Quit Alangrapher</div>
+    <div class="modal-title" style="font-size:16px;margin-bottom:12px;">Quit Foclo</div>
     <div id="quitConfirmMsg" style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5;"></div>
     <div style="display:flex;gap:10px;justify-content:center;">
       <button class="btn btn-secondary" style="flex:1;" onclick="closeQuitModal()">Cancel</button>
@@ -334,8 +335,8 @@
 <div class="modal-overlay" id="easterEggModal">
   <div class="modal-card">
     <div class="modal-accent"></div>
-    <div class="modal-title">《Alangrapher 计时准则》</div>
-    <div class="modal-subtitle">The Alangrapher's Code of Timing</div>
+    <div class="modal-title">《Foclo 计时准则》</div>
+    <div class="modal-subtitle">The Foclo's Code of Timing</div>
     <div class="modal-quote">"时间不会说谎。"</div>
     <div class="modal-quote-en">"Time tells no lie."</div>
     <div class="modal-divider"></div>

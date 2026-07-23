@@ -1,4 +1,4 @@
-# Alangrapher · 技术决策
+# Foclo · 技术决策
 
 > **作用**：记录"为什么这么做"，避免未来重复讨论已决定的架构问题。
 > **和 SPEC.md 的区别**：SPEC 管 UI 要做成什么样，DECISIONS 管技术为什么这么选。
@@ -182,7 +182,7 @@ widgets/
 | 策略：定时复制 SQLite 文件 | 简单可靠。不比在线备份慢（SQLite 文件通常 < 10MB）。 |
 | 频率：每小时（默认） | Settings 可改为其他间隔。 |
 | 保留策略：最近 24 个备份 | 超出自动删旧。可配。 |
-| 路径：`~/Documents/Alangrapher/backups/` | macOS 标准 Documents 目录。Windows 对应 `%USERPROFILE%\Documents\`。 |
+| 路径：`~/Documents/Foclo/backups/` | macOS 标准 Documents 目录。Windows 对应 `%USERPROFILE%\Documents\`。 |
 | 实现：`threading.Timer` + `shutil.copy2` | 独立线程，不阻塞 UI。 |
 
 ---

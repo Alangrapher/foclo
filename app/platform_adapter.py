@@ -13,17 +13,17 @@ def app_data_dir() -> Path:
         base = Path.home() / "AppData" / "Local"
     else:
         base = Path.home() / ".local" / "share"
-    return base / "Alangrapher"
+    return base / "Foclo"
 
 
 def database_path() -> Path:
     """Return the SQLite database path."""
-    return app_data_dir() / "alangrapher.db"
+    return app_data_dir() / "foclo.db"
 
 
 def export_dir() -> Path:
     """Return the default export directory."""
-    return Path.home() / "Documents" / "AlangrapherExports"
+    return Path.home() / "Documents" / "FocloExports"
 
 
 def modifier_key() -> str:
@@ -43,6 +43,6 @@ def is_bundled() -> bool:
     """Return True if running as a macOS .app bundle."""
     try:
         from Foundation import NSProcessInfo
-        return "YES" == NSProcessInfo.processInfo().environment().get("ALANGRAPHER_BUNDLED", "NO")
+        return "YES" == NSProcessInfo.processInfo().environment().get("FOCLO_BUNDLED", "NO")
     except ImportError:
         return False

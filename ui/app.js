@@ -62,7 +62,7 @@ let clickTimer = null;
 let lastExport = 'No exports yet';
 let isRefreshing = false;
 let isExporting = false;
-let exportFolder = safeStorage.get('alangrapher.exportFolder', '');
+let exportFolder = safeStorage.get('foclo.exportFolder', '');
 let clockIntervalId = null;
 
 const SUBJECT_COLORS = ['#5E6AD2', '#34C98B', '#F0B73F', '#D64430', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'];
@@ -274,7 +274,7 @@ function bindStaticControls() {
         const result = await callApi(window.pywebview.api.choose_export_folder(exportFolder), 'Choose export folder');
         if (result && result.ok && result.path) {
           exportFolder = result.path;
-          safeStorage.set('alangrapher.exportFolder', exportFolder);
+          safeStorage.set('foclo.exportFolder', exportFolder);
           if (exportPathEl) exportPathEl.textContent = exportFolder;
         }
       } catch (e) { /* user cancelled */ }
@@ -372,7 +372,7 @@ async function loadSettings() {
   weekStart = s.week_starts_on === 'Monday' ? 'mon' : 'sun';
   defaultSlots = s.default_slots || '3';
   // Backup state
-  window._backupPath = s.backup_location || '~/Documents/Alangrapher/backups/';
+  window._backupPath = s.backup_location || '~/Documents/Foclo/backups/';
   window._autoBackup = s.auto_backup !== '0';
 }
 
@@ -814,7 +814,7 @@ function renderCompact() {
 }
 
 function enterCompact() {
-  safeStorage.set('alangrapher.compact', '1');
+  safeStorage.set('foclo.compact', '1');
   document.documentElement.classList.add('showing-compact');
   proto.classList.add('showing-compact');
   document.querySelector('.sidebar').style.display = 'none';
@@ -828,7 +828,7 @@ function enterCompact() {
 }
 
 function exitCompact() {
-  safeStorage.set('alangrapher.compact', '0');
+  safeStorage.set('foclo.compact', '0');
   document.documentElement.classList.remove('showing-compact');
   proto.classList.remove('showing-compact');
   document.querySelector('.sidebar').style.display = '';
@@ -872,10 +872,10 @@ function toggleThemeClick() {
 }
 
 function restoreUiPreferences() {
-  const storedTheme = safeStorage.get('alangrapher.theme', 'light');
-  previousTheme = safeStorage.get('alangrapher.previousTheme', 'light');
+  const storedTheme = safeStorage.get('foclo.theme', 'light');
+  previousTheme = safeStorage.get('foclo.previousTheme', 'light');
   applyTheme(storedTheme, false);
-  compactRestorePending = safeStorage.get('alangrapher.compact') === '1';
+  compactRestorePending = safeStorage.get('foclo.compact') === '1';
 }
 
 function applyTheme(theme, persist = true) {
@@ -885,13 +885,13 @@ function applyTheme(theme, persist = true) {
   if (!isMoss) previousTheme = theme;
   document.documentElement.classList.toggle('moss', isMoss);
   document.documentElement.classList.toggle('dark', isDark);
-  document.querySelector('.sidebar-brand').textContent = isMoss ? 'MOSS_SYS :: ONLINE' : 'Alangrapher';
+  document.querySelector('.sidebar-brand').textContent = isMoss ? 'MOSS_SYS :: ONLINE' : 'Foclo';
   darkToggle.style.color = isMoss ? '#cc2200' : '';
   darkToggle.style.borderColor = isMoss ? '#cc2200' : '';
   updateDarkButton();
   if (persist) {
-    safeStorage.set('alangrapher.theme', theme);
-    safeStorage.set('alangrapher.previousTheme', previousTheme);
+    safeStorage.set('foclo.theme', theme);
+    safeStorage.set('foclo.previousTheme', previousTheme);
   }
 }
 
@@ -1467,7 +1467,7 @@ function renderSettings() {
   const backupDescEl = document.getElementById('backupDesc');
   if (backupPathEl) {
     // Reflect saved path
-    const savedPath = window._backupPath || '~/Documents/Alangrapher/backups/';
+    const savedPath = window._backupPath || '~/Documents/Foclo/backups/';
     backupPathEl.textContent = savedPath;
     if (backupDescEl) backupDescEl.textContent = 'Hourly backup to ' + savedPath + '/';
   }
@@ -1566,7 +1566,7 @@ function bindSettingsControls() {
     restoreBtn.addEventListener('click', async () => {
       if (!window.pywebview || !window.pywebview.api) return;
       try {
-        const savedPath = window._backupPath || '~/Documents/Alangrapher/backups/';
+        const savedPath = window._backupPath || '~/Documents/Foclo/backups/';
         const pick = await callApi(window.pywebview.api.choose_backup_file(savedPath), 'Choose backup file');
         if (!pick.ok) {
           if (!isCancelResult(pick)) alert('Restore file selection failed: ' + (pick.error || 'No file selected'));

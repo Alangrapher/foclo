@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller spec for Alangrapher.
+PyInstaller spec for Foclo.
 """
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
@@ -31,21 +31,21 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=None)
 
 exe = EXE(
     pyz, a.scripts, a.binaries, a.zipfiles, a.datas, [],
-    name='Alangrapher',
+    name='Foclo',
     debug=False, bootloader_ignore_signals=False,
     strip=False, upx=True, console=False,
 )
 
 app = BUNDLE(
     exe,
-    name='Alangrapher.app',
+    name='Foclo.app',
     icon='AppIcon.icns',
-    bundle_identifier='com.alangrapher.app',
+    bundle_identifier='com.foclo.app',
     info_plist={
-        'CFBundleName': 'Alangrapher',
-        'CFBundleDisplayName': 'Alangrapher',
-        'CFBundleVersion': '0.40',
-        'CFBundleShortVersionString': '0.40',
+        'CFBundleName': 'Foclo',
+        'CFBundleDisplayName': 'Foclo',
+        'CFBundleVersion': '1.0',
+        'CFBundleShortVersionString': '1.0',
         'NSHighResolutionCapable': True,
         'LSMinimumSystemVersion': '13.0',
     },

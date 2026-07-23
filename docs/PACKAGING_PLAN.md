@@ -1,4 +1,4 @@
-# PACKAGING PLAN — Alangrapher
+# PACKAGING PLAN — Foclo
 
 ## 当前状态
 
@@ -44,24 +44,24 @@
 
 ```bash
 # macOS .app
-pyinstaller --windowed --name Alangrapher \
+pyinstaller --windowed --name Foclo \
   --add-data "ui:ui" \
   --add-data "app:app" \
   --add-data "timer_engine.py:." \
   --hidden-import webview.platforms.cocoa \
-  --icon alangrapher.icns \
+  --icon foclo.icns \
   main.py
 
 # macOS .dmg (after .app built)
-hdiutil create -volname Alangrapher -srcfolder dist/Alangrapher.app Alangrapher.dmg
+hdiutil create -volname Foclo -srcfolder dist/Foclo.app Foclo.dmg
 
 # Windows .exe
-pyinstaller --windowed --name Alangrapher \
+pyinstaller --windowed --name Foclo \
   --add-data "ui;ui" \
   --add-data "app;app" \
   --add-data "timer_engine.py;." \
   --hidden-import webview.platforms.winforms \
-  --icon alangrapher.ico \
+  --icon foclo.ico \
   main.py
 ```
 
@@ -71,14 +71,14 @@ pyinstaller --windowed --name Alangrapher \
 # 签名
 codesign --deep --force --verify --verbose \
   --sign "Developer ID Application: Your Name (TEAMID)" \
-  dist/Alangrapher.app
+  dist/Foclo.app
 
 # 公证
-xcrun notarytool submit Alangrapher.dmg \
+xcrun notarytool submit Foclo.dmg \
   --apple-id you@example.com --team-id TEAMID --wait
 
 # 装订
-xcrun stapler staple dist/Alangrapher.app
+xcrun stapler staple dist/Foclo.app
 ```
 
 ## 不推荐现在就打包

@@ -1,35 +1,35 @@
-# RUNBOOK — Alangrapher
+# RUNBOOK — Foclo
 
 ## 环境要求
 
 - **Python**: 3.13+
-- **虚拟环境**: `/tmp/alangrapher_venv/`
+- **虚拟环境**: `/tmp/foclo_venv/`
 - **依赖**: pywebview, pyobjc (macOS)
 - **无 Node.js / npm 依赖**
 
 ## 依赖安装
 
 ```bash
-python3 -m venv /tmp/alangrapher_venv
-/tmp/alangrapher_venv/bin/pip install pywebview pyobjc
+python3 -m venv /tmp/foclo_venv
+/tmp/foclo_venv/bin/pip install pywebview pyobjc
 ```
 
 ## 启动应用
 
 ```bash
 # 终端直接启动
-cd ~/Projects/Alangrapher
-/tmp/alangrapher_venv/bin/python3 main.py
+cd ~/Projects/Foclo
+/tmp/foclo_venv/bin/python3 main.py
 
 # 或双击
-open ~/Projects/Alangrapher/launch.command
+open ~/Projects/Foclo/launch.command
 ```
 
 ## 运行测试
 
 ```bash
-cd ~/Projects/Alangrapher
-/tmp/alangrapher_venv/bin/python3 -m pytest tests/ -v
+cd ~/Projects/Foclo
+/tmp/foclo_venv/bin/python3 -m pytest tests/ -v
 ```
 
 ## 手动冒烟测试
@@ -38,7 +38,7 @@ cd ~/Projects/Alangrapher
 
 ## 应用数据存储
 
-- **数据库**: `~/Projects/Alangrapher/data/alangrapher.db` (SQLite, WAL 模式)
+- **数据库**: `~/Projects/Foclo/data/foclo.db` (SQLite, WAL 模式)
 - **备份**: 未启用（后续通过 Auto Backup setting 配置）
 
 ## 技术栈

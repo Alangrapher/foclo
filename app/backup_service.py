@@ -11,7 +11,7 @@ from pathlib import Path
 from app.storage import get_setting, DB_PATH
 
 
-DEFAULT_BACKUP_DIR = os.path.expanduser("~/Documents/Alangrapher/backups")
+DEFAULT_BACKUP_DIR = os.path.expanduser("~/Documents/Foclo/backups")
 DEFAULT_INTERVAL_MIN = 60
 MAX_BACKUPS = 24
 
@@ -122,7 +122,7 @@ class BackupService:
         os.makedirs(backup_dir, exist_ok=True)
 
         ts = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-        filename = f"alangrapher_{ts}.db"
+        filename = f"foclo_{ts}.db"
         dest = os.path.join(backup_dir, filename)
 
         # Use get_conn() for WAL mode + busy_timeout, then backup API
@@ -188,7 +188,7 @@ class BackupService:
             panel.setCanChooseFiles_(True)
             panel.setAllowedFileTypes_(["db"])
             panel.setTitle_("Choose Backup to Restore")
-            panel.setMessage_("Select an Alangrapher backup file (.db).")
+            panel.setMessage_("Select a Foclo backup file (.db).")
             panel.setPrompt_("Select")
             if start_dir and os.path.isdir(start_dir):
                 panel.setDirectoryURL_(NSURL.fileURLWithPath_(start_dir))
@@ -217,7 +217,7 @@ class BackupService:
         if not os.path.isfile(backup_path):
             return False, f"File not found: {backup_path}"
 
-        # Validate it looks like an Alangrapher DB
+        # Validate it looks like a Foclo DB
         try:
             conn = sqlite3.connect(backup_path)
             try:
@@ -227,7 +227,7 @@ class BackupService:
                 required = {"subjects", "records", "todos", "settings", "slot_state"}
                 missing = required - tables
                 if missing:
-                    return False, f"Not a valid Alangrapher backup: missing tables {missing}"
+                    return False, f"Not a valid Foclo backup: missing tables {missing}"
             finally:
                 conn.close()
         except sqlite3.Error as e:
@@ -280,10 +280,10 @@ class BackupService:
     def _prune(self, backup_dir: str):
         """Keep only the most recent MAX_BACKUPS."""
         try:
-            # BUG 6: filter to alangrapher_*.db so foreign .db files don't displace real backups
+            # BUG 6: filter to foclo_*.db so foreign .db files don't displace real backups
             files = sorted(
                 [f for f in os.listdir(backup_dir)
-                 if f.startswith("alangrapher_") and f.endswith(".db")],
+                 if f.startswith("foclo_") and f.endswith(".db")],
                 reverse=True,
             )
             for old in files[MAX_BACKUPS:]:

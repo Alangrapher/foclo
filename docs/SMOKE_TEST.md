@@ -1,4 +1,4 @@
-# SMOKE TEST — Alangrapher
+# SMOKE TEST — Foclo
 
 每次重构后逐项验证。
 

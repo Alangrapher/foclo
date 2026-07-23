@@ -1,4 +1,4 @@
-# Alangrapher · UI Spec
+# Foclo · UI Spec
 
 > **作用**：这个文件是 UI 需求的唯一真相源。微信对话可以丢，这个文件不能过期。
 > **更新规则**：每次 UI 讨论的结论实时写入，不要事后补。标注日期。
@@ -50,7 +50,7 @@
 ### ① 「Code of Timing」彩蛋
 - **出处**：用户 2026-06-12：「红框的文字改成 Code of Timing，点击后出那个彩蛋内容」
 - **状态**：✅ 已确认
-- **详情**：放在页面**左下角**，代替原来的 "local timer tracker"。内容：「Alangrapher's code of timing」。不做 dark mode 限制。
+- **详情**：放在页面**左下角**，代替原来的 "local timer tracker"。内容：「Foclo's code of timing」。不做 dark mode 限制。
 
 ### ② Slot 增加按钮
 - **出处**：用户 2026-06-12：「timer 页面缺少增加 slot 的按钮，slot 最多允许增加五个」

@@ -9,7 +9,7 @@ from pathlib import Path
 
 from app.platform_adapter import app_data_dir
 
-DB_PATH = app_data_dir() / "alangrapher.db"
+DB_PATH = app_data_dir() / "foclo.db"
 
 _conn_gate = threading.Condition()
 _active_connections = 0
@@ -19,7 +19,7 @@ _quiescing = False
 class _TrackedConnection(sqlite3.Connection):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._alangrapher_closed = False
+        self._foclo_closed = False
 
     def close(self):
         global _active_connections
@@ -27,8 +27,8 @@ class _TrackedConnection(sqlite3.Connection):
             return super().close()
         finally:
             with _conn_gate:
-                if not self._alangrapher_closed:
-                    self._alangrapher_closed = True
+                if not self._foclo_closed:
+                    self._foclo_closed = True
                     _active_connections -= 1
                     _conn_gate.notify_all()
 
@@ -93,7 +93,7 @@ def init_db():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     # One-time migration: move legacy DB from project dir to Application Support
-    _legacy_path = Path(__file__).resolve().parent.parent / "data" / "alangrapher.db"
+    _legacy_path = Path(__file__).resolve().parent.parent / "data" / "foclo.db"
     if not DB_PATH.exists() and _legacy_path.exists():
         import shutil
         # Flush WAL to main DB file before copying — otherwise any

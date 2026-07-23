@@ -103,7 +103,7 @@ if IS_MAC:
 
         def _showQuitAlert(self):
             alert = AppKit.NSAlert.alloc().init()
-            alert.setMessageText_("Quit Alangrapher")
+            alert.setMessageText_("Quit Foclo")
             alert.setInformativeText_("Timers are active. What would you like to do?")
             alert.addButtonWithTitle_("Cancel")
             alert.addButtonWithTitle_("Archive")
@@ -133,7 +133,7 @@ if IS_MAC:
     # ── TrayIcon ─────────────────────────────────────────────
 
     class TrayIcon:
-        """Menu bar status item for Alangrapher.
+        """Menu bar status item for Foclo.
 
         Shows clock.badge.checkmark when timers are running,
         clock.badge.xmark when idle.
@@ -194,7 +194,7 @@ if IS_MAC:
             show_item.setTarget_(target)
             menu.addItem_(AppKit.NSMenuItem.separatorItem())
             quit_item = menu.addItemWithTitle_action_keyEquivalent_(
-                "Quit Alangrapher", "quitApp:", "q"
+                "Quit Foclo", "quitApp:", "q"
             )
             quit_item.setTarget_(target)
             self._status_item.setMenu_(menu)

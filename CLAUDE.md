@@ -1,4 +1,4 @@
-# Alangrapher — WebView Edition
+# Foclo — WebView Edition
 
 ## ⚠️ CRITICAL: Architecture Constraint (READ FIRST)
 

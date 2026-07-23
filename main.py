@@ -1,4 +1,4 @@
-"""Alangrapher — WebView edition.
+"""Foclo — WebView edition.
 
 pywebview renders prototype HTML in native WebKit.
 Python handles timer engine, SQLite, and system tray.
@@ -51,7 +51,7 @@ def build_html() -> str:
             js = f.read()
     except FileNotFoundError as e:
         _tkmsg.showerror(
-            "Alangrapher — Missing UI files",
+            "Foclo — Missing UI files",
             f"Could not load UI file:\n{e.filename}\n\n"
             "The application bundle may be incomplete. Please reinstall.",
         )
@@ -64,7 +64,7 @@ def build_html() -> str:
 
 def main():
     # Startup log for debugging on Windows
-    log_path = os.path.join(os.path.expanduser("~"), "alangrapher_startup.log")
+    log_path = os.path.join(os.path.expanduser("~"), "foclo_startup.log")
     try:
         with open(log_path, "w") as lf:
             lf.write(f"platform={sys.platform}\n")
@@ -85,7 +85,7 @@ def main():
     html = build_html()
 
     window = webview.create_window(
-        title="Alangrapher",
+        title="Foclo",
         html=html,
         width=760,
         height=620,
@@ -133,7 +133,7 @@ if __name__ == "__main__":
     try:
         main()
     except Exception:
-        log_path = os.path.join(os.path.expanduser("~"), "alangrapher_crash.log")
+        log_path = os.path.join(os.path.expanduser("~"), "foclo_crash.log")
         with open(log_path, "w") as f:
             traceback.print_exc(file=f)
         raise

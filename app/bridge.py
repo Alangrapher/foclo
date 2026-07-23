@@ -63,7 +63,7 @@ class Api:
         SWP_NOZORDER = 0x0004
 
         # ── find the window handle ──────────────────────
-        hwnd = user32.FindWindowW(None, "Alangrapher")
+        hwnd = user32.FindWindowW(None, "Foclo")
         if not hwnd:
             return {"ok": False, "error": "Could not find window handle"}
 
@@ -305,10 +305,10 @@ class Api:
             ext = ext_map.get(format, ".xlsx")
 
             if folder and os.path.isdir(folder):
-                path = os.path.join(folder, f"alangrapher_export_{s_str}_{e_str}{ext}")
+                path = os.path.join(folder, f"foclo_export_{s_str}_{e_str}{ext}")
             else:
                 import tempfile
-                path = os.path.join(tempfile.gettempdir(), f"alangrapher_export_{s_str}_{e_str}{ext}")
+                path = os.path.join(tempfile.gettempdir(), f"foclo_export_{s_str}_{e_str}{ext}")
 
             if format == "md":
                 result = export_markdown(path, start_date=sd, end_date=ed)
