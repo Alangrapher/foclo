@@ -5,39 +5,49 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version tag (e.g. v1.0.2)'
-        required: true
-        default: 'v1.0.1'
 
 jobs:
   build:
     runs-on: windows-latest
+    permissions:
+      contents: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          python-version: '3.11'
 
-      - name: Install Python dependencies
-        run: pip install -r requirements-windows.txt
-
-      - name: Install Inno Setup
-        shell: pwsh
+      - name: Install dependencies
         run: |
-          $url = "https://files.jrsoftware.org/is/6/innosetup-6.3.1.exe"
-          $installer = "$env:RUNNER_TEMP\innosetup.exe"
-          Invoke-WebRequest -Uri $url -OutFile $installer
-          Start-Process -FilePath $installer -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/DIR=C:\innosetup' -Wait -NoNewWindow
-          echo "C:\innosetup" >> $env:GITHUB_PATH
+          python -m pip install --upgrade pip
+          pip install pywebview pyinstaller openpyxl pystray Pillow
 
-      - name: Extract version
+      - name: Build release exe (no console)
+        run: |
+          pyinstaller `
+            --onefile `
+            --windowed `
+            --name Foclo `
+            --add-data "ui;ui" `
+            --hidden-import webview.platforms.edgechromium `
+            --hidden-import webview.platforms.winforms `
+            main.py
+
+      - name: Build debug exe (with console)
+        run: |
+          pyinstaller `
+            --onefile `
+            --console `
+            --name Foclo-debug `
+            --add-data "ui;ui" `
+            --hidden-import webview.platforms.edgechromium `
+            --hidden-import webview.platforms.winforms `
+            main.py
+
+      - name: Extract version from tag
         id: version
         shell: pwsh
         run: |
@@ -45,22 +55,31 @@ jobs:
           if ($ref -match 'refs/tags/v(.+)') {
             $ver = $matches[1]
           } else {
-            $ver = "${{ github.event.inputs.version }}" -replace '^v', ''
+            $ver = "0.0.0-dev"
           }
           echo "version=$ver" >> $env:GITHUB_OUTPUT
 
-      - name: Build with PyInstaller
-        run: pyinstaller Foclo-windows.spec
-
-      - name: Build installer with Inno Setup
-        shell: pwsh
+      - name: Build installer (Inno Setup)
         run: |
-          & "C:\innosetup\ISCC.exe" /DVersion=${{ steps.version.outputs.version }} installer.iss
+          iscc /DVersion=${{ steps.version.outputs.version }} installer.iss
 
-      - name: Upload installer to Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/Foclo-Setup-${{ steps.version.outputs.version }}.exe
-          tag_name: ${{ github.ref_name }}
+          name: "Foclo v${{ steps.version.outputs.version }}"
+          body: |
+            ## Foclo v${{ steps.version.outputs.version }}
+
+            ### Windows
+            Download `Foclo-Setup-${{ steps.version.outputs.version }}.exe` — double-click to install.
+
+            ### macOS
+            See [latest macOS release](https://github.com/Alangrapher/foclo/releases/latest) for the DMG.
+          files: |
+            dist/Foclo-Setup-*.exe
+            dist/Foclo.exe
+            dist/Foclo-debug.exe
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
