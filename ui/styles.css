@@ -647,10 +647,10 @@ html.dark .window { border-color: #30363D; box-shadow: 0 12px 48px rgba(0,0,0,0.
   margin-bottom: 10px;
 }
 .gcard-bar-inner {
-  display: flex; height: 8px; border-radius: 4px; overflow: hidden; gap: 1px;
+  display: flex; height: 10px; border-radius: 4px; overflow: hidden;
 }
 .sb-seg {
-  min-width: 2px; height: 100%; border-radius: 2px;
+  height: 100%; flex-shrink: 0; min-width: 2px;
 }
 .gcard-legend {
   display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px;
@@ -667,25 +667,33 @@ html.dark .window { border-color: #30363D; box-shadow: 0 12px 48px rgba(0,0,0,0.
   border-top: 1px solid var(--border); padding-top: 6px;
 }
 .grec-row {
-  display: flex; align-items: center; gap: 8px;
-  padding: 5px 4px; border-radius: 6px;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 6px 4px; border-radius: 6px;
   font-size: 12px;
 }
 .grec-row:hover { background: var(--hover); }
+.grec-line1 {
+  display: flex; align-items: center; gap: 8px;
+}
+.grec-line2 {
+  display: flex; align-items: center; gap: 8px;
+  padding-left: 16px;
+}
 .grec-dot {
   width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
 }
 .grec-time {
-  color: var(--muted); font-size: 11px; flex: 0 0 70px; font-variant-numeric: tabular-nums;
+  color: var(--muted); font-size: 10px; flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 .grec-subj {
-  font-weight: 600; color: var(--text); flex: 0 0 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-weight: 600; color: var(--text); flex: 1;
 }
 .grec-desc {
-  color: var(--text2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--text2); flex: 1;
 }
 .grec-dur {
-  color: var(--text2); flex: 0 0 36px; text-align: right; font-variant-numeric: tabular-nums;
+  color: var(--text2); flex-shrink: 0; font-variant-numeric: tabular-nums;
 }
 .grec-row .records-actions { visibility: hidden; }
 .grec-row:hover .records-actions { visibility: visible; }

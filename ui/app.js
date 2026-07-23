@@ -1039,8 +1039,8 @@ function renderDayCard(date, dayRecords, dayTotalS, subjectTotals) {
   const subjectNames = Object.keys(subjectTotals);
   const barSegments = subjectNames.map(sn => {
     const st = subjectTotals[sn];
-    const pct = dayTotalS > 0 ? Math.max((st.total_s / dayTotalS * 100), 2) : 0;
-    return `<span class="sb-seg" style="flex:${pct.toFixed(0)} 0 0;background:${st.color}" title="${esc(sn)}: ${(st.total_s/3600).toFixed(1)}h"></span>`;
+    const pct = dayTotalS > 0 ? (st.total_s / dayTotalS * 100) : 0;
+    return `<span class="sb-seg" style="width:${pct.toFixed(1)}%;background:${st.color}" title="${esc(sn)}: ${(st.total_s/3600).toFixed(1)}h"></span>`;
   }).join('');
   
   // Build record rows
@@ -1053,12 +1053,16 @@ function renderDayCard(date, dayRecords, dayTotalS, subjectTotals) {
     const subj = subjectById(r.subject_id);
     const dotColor = subj ? subj.color : '#5E6AD2';
     return `<div class="grec-row" data-id="${r.id}" data-date="${attr(date)}" data-subject="${attr(subjName)}" data-desc="${attr(desc)}" data-dur="${attr(dur)}"${r.date === todayIso() ? ` ondblclick="fillRecordToSlot(${r.id})" title="Double-click to load into timer"` : ''}>
-      <span class="grec-dot" style="background:${dotColor}"></span>
-      <span class="grec-time">${start}–${end}</span>
-      <span class="grec-subj">${esc(subjName)}</span>
-      <span class="grec-desc">${esc(desc)}</span>
-      <span class="grec-dur">${esc(dur)}</span>
-      <span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span>
+      <div class="grec-line1">
+        <span class="grec-dot" style="background:${dotColor}"></span>
+        <span class="grec-subj">${esc(subjName)}</span>
+        <span class="grec-dur">${esc(dur)}</span>
+        <span class="records-actions"><span class="act" onclick="editRecord(this)" title="Edit">✎</span><span class="act del" onclick="delRecord(this)" title="Delete">🗑</span></span>
+      </div>
+      <div class="grec-line2">
+        <span class="grec-time">${start}–${end}</span>
+        <span class="grec-desc">${esc(desc)}</span>
+      </div>
     </div>`;
   }).join('');
   
@@ -1204,7 +1208,7 @@ function editRecord(span) {
     row.querySelector('.grec-dur').style.display = 'none';
     
     // Actions: save/cancel
-    row.querySelector('td:last-child, .grec-row > :last-child').innerHTML = 
+    row.querySelector('.records-actions').innerHTML = 
       '<span class="edit-actions-inline"><span class="act save" onclick="saveEdit(this)" title="Save">✓</span><span class="act cancel" onclick="cancelEdit(this)" title="Cancel">✕</span></span>';
     return;
   }
@@ -1232,6 +1236,44 @@ function editRecord(span) {
 }
 
 async function saveEdit(span) {
+  // Gallery row path
+  const gRow = span.closest('.grec-row');
+  if (gRow) {
+    const date = gRow.dataset.date || todayIso();
+    const subjectSelect = gRow.querySelector('.grec-subj select');
+    const subjectId = Number(subjectSelect.value) || null;
+    const desc = gRow.querySelector('.grec-desc input').value;
+    const startInput = gRow.querySelector('.edit-start-time');
+    const endInput = gRow.querySelector('.edit-end-time');
+    let start, end;
+    if (startInput && endInput && startInput.value && endInput.value) {
+      start = `${date}T${startInput.value}:00`;
+      end = `${date}T${endInput.value}:00`;
+    } else {
+      const fallback = recordRangeFromDuration(date, '0h');
+      start = fallback.start; end = fallback.end;
+    }
+    const id = Number(gRow.dataset.id);
+    if (window.pywebview && window.pywebview.api) {
+      const result = await callApi(window.pywebview.api.update_record(id, {
+        subject_id: subjectId, description: desc,
+        start_time: start, end_time: end
+      }), 'Update record');
+      if (!result || result.ok === false) return;
+      await loadRecords();
+      renderGallery(); renderTodayRecords(); updateTiles();
+      return;
+    }
+    const selectedSubject = subjectById(subjectId);
+    gRow.dataset.subject = selectedSubject ? selectedSubject.name : (subjectSelect.options[subjectSelect.selectedIndex]?.text || '—');
+    gRow.dataset.desc = desc;
+    const r = records.find(x => Number(x.id) === id);
+    if (r) Object.assign(r, {subject_id: subjectId, subject_name: gRow.dataset.subject, description: desc});
+    renderGallery(); renderTodayRecords(); updateTiles();
+    return;
+  }
+
+  // Table row path
   const tr = span.closest('tr');
   const startInput = tr.querySelector('.edit-start-time');
   const endInput = tr.querySelector('.edit-end-time');
