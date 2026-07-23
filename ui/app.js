@@ -62,7 +62,8 @@ let clickTimer = null;
 let lastExport = 'No exports yet';
 let isRefreshing = false;
 let isExporting = false;
-let exportFolder = safeStorage.get('foclo.exportFolder', '');
+// Migration: fallback to old key name (Alangrapher → Foclo v1.0 rename)
+let exportFolder = safeStorage.get('foclo.exportFolder', '') || safeStorage.get('alangrapher.exportFolder', '');
 let clockIntervalId = null;
 
 const SUBJECT_COLORS = ['#5E6AD2', '#34C98B', '#F0B73F', '#D64430', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'];
@@ -872,10 +873,11 @@ function toggleThemeClick() {
 }
 
 function restoreUiPreferences() {
-  const storedTheme = safeStorage.get('foclo.theme', 'light');
-  previousTheme = safeStorage.get('foclo.previousTheme', 'light');
+  // Migration: fallback to old key names (Alangrapher → Foclo v1.0 rename)
+  const storedTheme = safeStorage.get('foclo.theme', '') || safeStorage.get('alangrapher.theme', 'light');
+  previousTheme = safeStorage.get('foclo.previousTheme', '') || safeStorage.get('alangrapher.previousTheme', 'light');
   applyTheme(storedTheme, false);
-  compactRestorePending = safeStorage.get('foclo.compact') === '1';
+  compactRestorePending = safeStorage.get('foclo.compact') === '1' || safeStorage.get('alangrapher.compact') === '1';
 }
 
 function applyTheme(theme, persist = true) {

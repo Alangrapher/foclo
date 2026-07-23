@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import sqlite3
+import sys
 import threading
 import time
 from contextlib import contextmanager
@@ -105,6 +106,38 @@ def init_db():
         except Exception:
             pass  # skip checkpoint failures; copy what we can
         shutil.copy2(str(_legacy_path), str(DB_PATH))
+
+    # v1.0 migration: move DB from old app data dir (Alangrapher → Foclo rename)
+    if not DB_PATH.exists():
+        import shutil as _shutil
+        _old_app_dirs = []
+        if sys.platform == "darwin":
+            _old_app_dirs.append(Path.home() / "Library" / "Application Support" / "Alangrapher")
+        elif sys.platform == "win32":
+            _old_app_dirs.append(Path.home() / "AppData" / "Local" / "Alangrapher")
+        else:
+            _old_app_dirs.append(Path.home() / ".local" / "share" / "Alangrapher")
+        # Also check project dir legacy
+        _old_app_dirs.append(Path(__file__).resolve().parent.parent / "data")
+        for _old_dir in _old_app_dirs:
+            _old_db = _old_dir / "alangrapher.db"
+            if _old_db.exists():
+                DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+                # Flush WAL before copy
+                try:
+                    _old_conn = sqlite3.connect(str(_old_db))
+                    _old_conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                    _old_conn.close()
+                except Exception:
+                    pass
+                _shutil.copy2(str(_old_db), str(DB_PATH))
+                # Also copy WAL/SHM if present
+                for _suffix in ("-wal", "-shm"):
+                    _old_wal = Path(str(_old_db) + _suffix)
+                    _new_wal = Path(str(DB_PATH) + _suffix)
+                    if _old_wal.exists():
+                        _shutil.copy2(str(_old_wal), str(_new_wal))
+                break
 
     with db_connection() as conn:
         conn.executescript("""

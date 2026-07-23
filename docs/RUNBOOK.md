@@ -22,7 +22,7 @@ cd ~/Projects/Foclo
 /tmp/foclo_venv/bin/python3 main.py
 
 # 或双击
-open ~/Projects/Foclo/launch.command
+open ~/Projects/Alangrapher/launch.command
 ```
 
 ## 运行测试
@@ -38,7 +38,7 @@ cd ~/Projects/Foclo
 
 ## 应用数据存储
 
-- **数据库**: `~/Projects/Foclo/data/foclo.db` (SQLite, WAL 模式)
+- **数据库**: `~/Projects/Alangrapher/data/foclo.db` (SQLite, WAL 模式)
 - **备份**: 未启用（后续通过 Auto Backup setting 配置）
 
 ## 技术栈

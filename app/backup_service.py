@@ -50,6 +50,8 @@ class BackupService:
     def start(self):
         with self._lock:                     # BUG 12: hold lock, consistent with _tick
             self._schedule_next()
+        # v1.0 migration: copy old backups from Alangrapher dir → Foclo dir
+        self._migrate_old_backups()
 
     def stop(self):
         with self._lock:
@@ -277,13 +279,34 @@ class BackupService:
 
     # ── pruning ────────────────────────────────────────────
 
+    def _migrate_old_backups(self):
+        """v1.0: copy old alangrapher_*.db backups from old dir to new Foclo dir."""
+        old_dir = os.path.expanduser("~/Documents/Alangrapher/backups")
+        new_dir = os.path.expanduser("~/Documents/Foclo/backups")
+        if not os.path.isdir(old_dir):
+            return
+        # Only run once: if new dir already has backups, skip
+        if os.path.isdir(new_dir) and os.listdir(new_dir):
+            return
+        os.makedirs(new_dir, exist_ok=True)
+        try:
+            for f in os.listdir(old_dir):
+                if f.startswith("alangrapher_") and f.endswith(".db"):
+                    src = os.path.join(old_dir, f)
+                    dst = os.path.join(new_dir, f)
+                    if not os.path.exists(dst):
+                        import shutil
+                        shutil.copy2(src, dst)
+        except OSError:
+            pass
+
     def _prune(self, backup_dir: str):
         """Keep only the most recent MAX_BACKUPS."""
         try:
-            # BUG 6: filter to foclo_*.db so foreign .db files don't displace real backups
+            # BUG 6: filter to foclo_*.db OR alangrapher_*.db (v1.0 migration)
             files = sorted(
                 [f for f in os.listdir(backup_dir)
-                 if f.startswith("foclo_") and f.endswith(".db")],
+                 if (f.startswith("foclo_") or f.startswith("alangrapher_")) and f.endswith(".db")],
                 reverse=True,
             )
             for old in files[MAX_BACKUPS:]:
