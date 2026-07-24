@@ -37,23 +37,23 @@ jobs:
       - name: Create DMG
         run: |
           mkdir -p dmg_staging
-          cp -R dist/Alangrapher.app dmg_staging/
+          cp -R dist/Foclo.app dmg_staging/
           # Standard macOS DMG pattern: app + symlink to /Applications
           ln -s /Applications dmg_staging/Applications
           hdiutil create \
-            -volname "Alangrapher" \
+            -volname "Foclo" \
             -srcfolder dmg_staging \
             -ov \
             -format UDZO \
-            Alangrapher.dmg
-          echo "Created: Alangrapher.dmg ($(du -sh Alangrapher.dmg | cut -f1))"
+            Foclo.dmg
+          echo "Created: Foclo.dmg ($(du -sh Foclo.dmg | cut -f1))"
 
       - name: Upload artifact (branch push)
         uses: actions/upload-artifact@v4
         if: github.ref_type != 'tag'
         with:
-          name: Alangrapher-macOS
-          path: Alangrapher.dmg
+          name: Foclo-macOS
+          path: Foclo.dmg
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -63,13 +63,13 @@ jobs:
           body: |
             ## macOS ${{ github.ref_name }}
 
-            **Download:** `Alangrapher.dmg` below — open and drag **Alangrapher** to the **Applications** folder.
+            **Download:** `Foclo.dmg` below — open and drag **Foclo** to the **Applications** folder.
 
             ### First Launch
             Since the app is not Apple-notarized, macOS Gatekeeper will block it. To open:
-            1. **Right-click** on Alangrapher.app → **Open**
+            1. **Right-click** on Foclo.app → **Open**
             2. Click **Open** in the dialog
-            3. (Or via Terminal: `xattr -cr /Applications/Alangrapher.app`)
+            3. (Or via Terminal: `xattr -cr /Applications/Foclo.app`)
 
             ### Requirements
             - macOS 13 (Ventura) or later
@@ -77,6 +77,6 @@ jobs:
             ### Changes
             See [full changelog](https://github.com/Alangrapher/foclo/commits/main).
           files: |
-            Alangrapher.dmg
+            Foclo.dmg
           draft: false
           prerelease: false

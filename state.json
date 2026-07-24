@@ -1,0 +1,129 @@
+{
+  "updated": "2026-07-14T02:06:16.225283+08:00",
+  "modules": {
+    "invest": {
+      "name": "投资分析",
+      "icon": "📊",
+      "projects": {}
+    },
+    "writing": {
+      "name": "深度写作",
+      "icon": "✍️",
+      "projects": {}
+    },
+    "dev": {
+      "name": "软件开发",
+      "icon": "🖥️",
+      "projects": {}
+    },
+    "sys": {
+      "name": "系统运维",
+      "icon": "⚙️",
+      "projects": {}
+    },
+    "quant": {
+      "name": "量化教学",
+      "icon": "🧮",
+      "projects": {}
+    }
+  },
+  "daily_run_log": [
+    {
+      "date": "2026-07-07",
+      "run_at": "2026-07-08T01:49:09.669423+08:00",
+      "total_messages": 201,
+      "classified": {
+        "sys": 5,
+        "invest": 29
+      },
+      "unmatched_count": 167,
+      "elapsed_seconds": 0.326
+    },
+    {
+      "date": "2026-07-08",
+      "run_at": "2026-07-09T01:45:30.964873+08:00",
+      "total_messages": 317,
+      "classified": {
+        "sys": 12,
+        "quant": 1,
+        "invest": 29,
+        "writing": 1
+      },
+      "unmatched_count": 274,
+      "elapsed_seconds": 0.361
+    },
+    {
+      "date": "2026-07-09",
+      "run_at": "2026-07-10T01:45:52.230275+08:00",
+      "total_messages": 317,
+      "classified": {
+        "sys": 9,
+        "quant": 3,
+        "invest": 25
+      },
+      "unmatched_count": 280,
+      "elapsed_seconds": 0.028
+    },
+    {
+      "date": "2026-07-10",
+      "run_at": "2026-07-11T01:45:28.634690+08:00",
+      "total_messages": 254,
+      "classified": {
+        "sys": 10,
+        "quant": 1,
+        "invest": 20,
+        "writing": 1
+      },
+      "unmatched_count": 222,
+      "elapsed_seconds": 0.031
+    },
+    {
+      "date": "2026-07-11",
+      "run_at": "2026-07-12T01:45:26.315754+08:00",
+      "total_messages": 217,
+      "classified": {
+        "sys": 15,
+        "invest": 7,
+        "quant": 1
+      },
+      "unmatched_count": 194,
+      "elapsed_seconds": 0.271
+    },
+    {
+      "date": "2026-07-12",
+      "run_at": "2026-07-13T01:45:39.352504+08:00",
+      "total_messages": 52,
+      "classified": {
+        "sys": 1,
+        "quant": 1,
+        "invest": 2
+      },
+      "unmatched_count": 48,
+      "elapsed_seconds": 0.023
+    },
+    {
+      "date": "2026-07-13",
+      "run_at": "2026-07-14T01:45:30.421186+08:00",
+      "total_messages": 237,
+      "classified": {
+        "sys": 7,
+        "quant": 1,
+        "invest": 17
+      },
+      "unmatched_count": 212,
+      "elapsed_seconds": 0.389
+    },
+    {
+      "date": "2026-07-13",
+      "run_at": "2026-07-14T02:06:16.225283+08:00",
+      "total_messages": 237,
+      "classified": {
+        "sys": 7,
+        "quant": 1,
+        "invest": 17
+      },
+      "unmatched_count": 212,
+      "elapsed_seconds": 0.573
+    }
+  ]
+}
