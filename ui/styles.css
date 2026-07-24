@@ -641,6 +641,11 @@ html.dark .window { border-color: #30363D; box-shadow: 0 12px 48px rgba(0,0,0,0.
   .subject-actions,
   .grec-row .records-actions {
     visibility: visible;
+    opacity: 1;
+  }
+  .todo-item.done .todo-start-btn {
+    opacity: 0 !important;
+    visibility: hidden !important;
   }
 }
 
@@ -743,7 +748,7 @@ html.dark .window { border-color: #30363D; box-shadow: 0 12px 48px rgba(0,0,0,0.
    ═══════════════════════════════════════════════════════════ */
 
 .gcard-gantt {
-  margin: 6px 0 8px; padding: 0 4px;
+  margin: 6px 0 8px;
 }
 .gantt-ticks {
   position: relative; height: 16px; margin-bottom: 2px;
@@ -751,16 +756,47 @@ html.dark .window { border-color: #30363D; box-shadow: 0 12px 48px rgba(0,0,0,0.
 .gantt-hour {
   position: absolute; font-size: 10px; color: var(--muted);
   transform: translateX(-50%);
+  animation: gantt-tick-in 0.36s var(--ease-out) backwards;
 }
+.gantt-hour:nth-child(1) { animation-delay: 0.02s; }
+.gantt-hour:nth-child(2) { animation-delay: 0.05s; }
+.gantt-hour:nth-child(3) { animation-delay: 0.08s; }
+.gantt-hour:nth-child(4) { animation-delay: 0.11s; }
+.gantt-hour:nth-child(5) { animation-delay: 0.14s; }
+.gantt-hour:nth-child(6) { animation-delay: 0.17s; }
+.gantt-hour:nth-child(7) { animation-delay: 0.20s; }
 .gantt-strip {
-  position: relative; background: var(--hover); border-radius: 4px;
+  position: relative; width: 100%; background: var(--hover);
 }
 .gantt-bar {
-  position: absolute; height: 10px; border-radius: 3px;
+  position: absolute; border-radius: 3px;
   min-width: 2px; opacity: 0.85; cursor: pointer;
-  transition: opacity 0.12s;
+  transform-origin: left center;
+  transition:
+    opacity 0.18s ease,
+    transform 0.22s var(--ease-spring),
+    box-shadow 0.22s ease,
+    filter 0.18s ease;
 }
-.gantt-bar:hover { opacity: 1; }
+/* One-shot entrance class — disabled for alignment debugging */
+.gantt-bar.gantt-enter {
+  animation: gantt-bar-enter 0.42s var(--ease-spring) backwards;
+  animation-delay: calc(var(--bar-i, 0) * 0.032s + 0.06s);
+}
+.gantt-bar:hover,
+.gantt-bar.paired {
+  opacity: 1;
+  transform-origin: center center;
+  transform: scaleY(1.4);
+  z-index: 2;
+  filter: brightness(1.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+/* Dim non-focused bars while one is paired */
+.gantt-strip:has(.gantt-bar.paired) .gantt-bar:not(.paired) {
+  opacity: 0.32;
+  filter: saturate(0.7);
+}
 .gantt-empty {
   font-size: 10px; color: var(--muted); padding: 2px 6px;
   display: block; text-align: center;
@@ -796,7 +832,18 @@ html.dark .window { border-color: #30363D; box-shadow: 0 12px 48px rgba(0,0,0,0.
 .gallery-card:nth-child(5)   { animation-delay: 0.16s; }
 .gallery-card:nth-child(n+6) { animation-delay: 0.20s; }
 
+/* Gallery record rows — soft hover settle + pair link with gantt */
+.grec-row {
+  transition: background 0.18s ease, box-shadow 0.2s ease, transform 0.18s var(--ease-spring);
+}
+.grec-row.paired {
+  background: var(--hover);
+}
+.grec-row.highlight {
+}
+
 /* 2 — Button / control tactile feedback */
+.btn { transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.18s ease, transform 0.14s var(--ease-spring), opacity 0.15s ease; }
 .btn:not(:disabled):active { transform: scale(0.96); }
 .btn-primary:hover { box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 32%, transparent); }
 .btn-primary:not(:disabled):active { box-shadow: 0 1px 4px color-mix(in srgb, var(--accent) 24%, transparent); }
@@ -812,6 +859,7 @@ html.dark .window { border-color: #30363D; box-shadow: 0 12px 48px rgba(0,0,0,0.
 .nav-item { transition: background-color 0.18s ease, color 0.18s ease, transform 0.14s var(--ease-spring); }
 
 /* 4 — Timer: alive running indicator + state-change pop */
+.badge { transition: background 0.25s ease, color 0.25s ease; }
 .badge.running .dot { animation: pulse-dot 2s ease-in-out infinite; }
 @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
 .timer-clock { transition: color 0.25s ease; }
@@ -871,9 +919,145 @@ html.theme-anim .compact-panel,
 html.theme-anim .records-table td,
 html.theme-anim .records-table th,
 html.theme-anim .gantt-strip,
+html.theme-anim .gantt-bar,
 html.theme-anim .theme-toggle {
   transition: background-color 0.35s ease, color 0.35s ease,
               border-color 0.35s ease, box-shadow 0.35s ease !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MOTION v1.1.2 — Gantt polish + extra micro-interactions
+   ═══════════════════════════════════════════════════════════ */
+
+/* Gantt bar grow-in from left (timeline feel) */
+@keyframes gantt-bar-enter {
+  from {
+    opacity: 0;
+    transform: scaleX(0.12);
+  }
+  to {
+    opacity: 0.85;
+    transform: scaleX(1);
+  }
+}
+@keyframes gantt-tick-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(3px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Todo list — subtle transitions only, no entrance animation */
+.todo-item {
+  transition: background 0.15s ease;
+}
+.todo-item-subject,
+.todo-item-desc {
+  transition: color 0.2s ease, text-decoration-color 0.2s ease, opacity 0.2s ease;
+}
+.todo-item.done .todo-item-subject,
+.todo-item.done .todo-item-desc {
+  opacity: 0.72;
+}
+
+/* Subject list — subtle transitions only, no entrance animation */
+.subject-row {
+  transition: background 0.15s ease;
+}
+.subject-dot {
+  transition: transform 0.2s var(--ease-spring), box-shadow 0.15s ease;
+}
+.subject-row:hover .subject-dot:not(.editable) {
+  transform: scale(1.18);
+}
+
+/* Hover actions: fade in instead of hard visibility flip */
+.records-actions,
+.todo-start-btn,
+.todo-del-btn,
+.subject-actions {
+  opacity: 0;
+  transition: opacity 0.16s ease, visibility 0.16s ease, background 0.12s ease, color 0.12s ease, transform 0.12s var(--ease-spring);
+}
+.todo-item:hover .todo-start-btn,
+.todo-item:focus-within .todo-start-btn,
+.todo-item:hover .todo-del-btn,
+.todo-item:focus-within .todo-del-btn,
+.subject-row:hover .subject-actions,
+.subject-row:focus-within .subject-actions,
+tr:hover .records-actions,
+tr:focus-within .records-actions,
+.grec-row:hover .records-actions {
+  opacity: 1;
+  visibility: visible;
+}
+/* Keep done-todo start button hidden */
+.todo-item.done .todo-start-btn {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* Filter chips — smoother active settle */
+.chip {
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.14s var(--ease-spring), box-shadow 0.2s ease;
+}
+.chip.active {
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+/* Form focus ring (soft macOS-style glow) */
+.form-select,
+.form-input {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, opacity 0.15s ease;
+}
+.form-select:focus,
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+/* Summary tiles — subtle lift on hover */
+.tile {
+  transition: transform 0.25s var(--ease-spring), box-shadow 0.25s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.tile:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+html.dark .tile:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+}
+.tile-value {
+  transition: color 0.25s ease;
+}
+
+/* Toggle switch — slightly springier thumb */
+.toggle-slider {
+  transition: background 0.22s var(--ease-spring);
+}
+.toggle-slider::before {
+  transition: transform 0.22s var(--ease-spring);
+}
+
+/* Empty states fade in */
+.empty-state {
+  animation: item-enter 0.35s var(--ease-spring) backwards;
+}
+
+/* Setting rows — soft hover */
+.setting-row {
+  transition: background 0.15s ease;
+  border-radius: 8px;
+}
+.setting-row:hover {
+  background: color-mix(in srgb, var(--hover) 70%, transparent);
+}
+
+/* Compact mode arrows */
+.compact-timer-row .arrow {
+  transition: color 0.15s ease, background 0.15s ease, transform 0.14s var(--ease-spring);
+}
+.compact-timer-row .arrow:active {
+  transform: scale(0.88);
 }
 
 /* 8 — Respect reduced-motion: neutralize all of the above */
@@ -883,5 +1067,12 @@ html.theme-anim .theme-toggle {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+  .gantt-bar:hover,
+  .gantt-bar.paired {
+    transform: none;
+  }
+  .tile:hover {
+    transform: none;
   }
 }

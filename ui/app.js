@@ -225,6 +225,7 @@ function initializeDynamicDates() {
 
 function bindStaticControls() {
   document.querySelectorAll('.nav-item[data-page]').forEach(item => item.addEventListener('click', () => switchPage(item.dataset.page)));
+  bindGalleryMotion();
   compactBtn.addEventListener('click', enterCompact);
   expandBtn.addEventListener('click', exitCompact);
   closeBtn.addEventListener('click', async () => {
@@ -1092,6 +1093,13 @@ function renderGallery() {
     
     return renderDayCard(date, dayRecords, dayTotalS, subjectTotals);
   }).join('');
+
+  // Drop one-shot entrance class after bars finish animating
+  // so later highlight/pulse never restarts scaleX enter.
+  clearTimeout(renderGallery._enterTimer);
+  renderGallery._enterTimer = setTimeout(() => {
+    gallery.querySelectorAll('.gantt-bar.gantt-enter').forEach(el => el.classList.remove('gantt-enter'));
+  }, 900);
 }
 
 function renderDayCard(date, dayRecords, dayTotalS, subjectTotals) {
@@ -1182,23 +1190,25 @@ function renderGanttStrip(dayRecords, date) {
   });
   
   const numRows = rows.length;
-  const rowH = 13;
-  const barH = 10;
+  const rowH = 16;
+  const barH = 12;
+  const topPad = 4;
   
   // Time span: 9:00–次日 3:00 (18 hours, workday + late-night)
   const VIEW_START = 9 * 3600;   // 9:00
   const VIEW_END   = 27 * 3600;  // 次日 3:00
   const VIEW_SPAN  = VIEW_END - VIEW_START;  // 18 hours
   
-  // Build hour markers
+  // Build hour markers (9, 12, 15, 18, 21, 24/0, 27/3)
   const hourMarkers = [9, 12, 15, 18, 21, 24, 27].map(h => {
     const display = h >= 24 ? (h - 24) : h;
     const label = String(display).padStart(2, '0') + ':00';
     return `<span class="gantt-hour" style="left:${((h - 9) / 18 * 100).toFixed(1)}%">${label}</span>`;
   }).join('');
   
-  // Build bars — position relative to 9:00–27:00 window, click to highlight record row
+  // Build bars — position relative to 9:00–27:00 window
   const allBars = [];
+  let barIndex = 0;
   for (let ri = 0; ri < numRows; ri++) {
     rows[ri].forEach(rec => {
       const offset = rec.secFromMidnight - VIEW_START;
@@ -1208,12 +1218,13 @@ function renderGanttStrip(dayRecords, date) {
       const tooltip = desc
         ? `${esc(rec.subject_name)}: ${desc} (${rec.start}–${rec.end}, ${rec.duration})`
         : `${esc(rec.subject_name)} ${rec.start}–${rec.end} (${rec.duration})`;
-      allBars.push(`<div class="gantt-bar" data-id="${rec.id}" style="left:${left.toFixed(2)}%;width:${width.toFixed(2)}%;top:${ri*rowH}px;background:${rec.color}" title="${tooltip}" onclick="highlightRecord(${rec.id})"></div>`);
+      allBars.push(`<div class="gantt-bar gantt-enter" data-id="${rec.id}" style="left:${left.toFixed(2)}%;width:${width.toFixed(2)}%;height:${barH}px;top:${ri*rowH + topPad}px;background:${rec.color};--bar-i:${barIndex}" title="${tooltip}"></div>`);
+      barIndex++;
     });
   }
   
   const hasRecords = allBars.length > 0;
-  const stripH = numRows * rowH + (rowH - barH);
+  const stripH = numRows * rowH + topPad;
   return `<div class="gcard-gantt">
     <div class="gantt-ticks">${hourMarkers}</div>
     <div class="gantt-strip" style="height:${stripH}px">
@@ -1396,15 +1407,48 @@ async function saveEdit(span) {
 
 function cancelEdit() { renderGallery(); renderTodayRecords(); }
 
-function highlightRecord(id) {
-  // Remove previous highlight
-  document.querySelectorAll('.grec-row.highlight').forEach(el => el.classList.remove('highlight'));
-  // Find and highlight the matching row, scroll into view
-  const row = document.querySelector(`.grec-row[data-id=\"${id}\"]`);
-  if (row) {
-    row.classList.add('highlight');
-    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
+/** Clear gantt ↔ record hover pairing classes */
+function clearGalleryPair() {
+  document.querySelectorAll('.gantt-bar.paired, .grec-row.paired').forEach(el => {
+    el.classList.remove('paired');
+  });
+}
+
+/**
+ * Gallery motion: hover on a gantt bar or record row pairs the matching
+ * counterpart (visual link). Bound once; survives re-renders via delegation.
+ */
+function bindGalleryMotion() {
+  const gallery = document.getElementById('galleryView');
+  if (!gallery || gallery.dataset.motionBound === '1') return;
+  gallery.dataset.motionBound = '1';
+
+  gallery.addEventListener('pointerover', (e) => {
+    const el = e.target.closest('.gantt-bar, .grec-row');
+    if (!el || !gallery.contains(el)) return;
+    const id = el.dataset.id;
+    if (!id) return;
+    // Skip if already paired to this id
+    if (el.classList.contains('paired') || el.classList.contains('highlight')) {
+      // still ensure pair class on both
+    }
+    clearGalleryPair();
+    gallery.querySelectorAll(`.gantt-bar[data-id="${id}"]`).forEach(n => n.classList.add('paired'));
+    gallery.querySelectorAll(`.grec-row[data-id="${id}"]`).forEach(n => n.classList.add('paired'));
+  });
+
+  gallery.addEventListener('pointerout', (e) => {
+    const el = e.target.closest('.gantt-bar, .grec-row');
+    if (!el || !gallery.contains(el)) return;
+    const id = el.dataset.id;
+    const to = e.relatedTarget;
+    if (to && el.contains(to)) return;
+    if (to && gallery.contains(to)) {
+      const toEl = to.closest && to.closest('.gantt-bar, .grec-row');
+      if (toEl && String(toEl.dataset.id) === String(id)) return;
+    }
+    clearGalleryPair();
+  });
 }
 
 async function delRecord(span) {
