@@ -1110,12 +1110,6 @@ function renderDayCard(date, dayRecords, dayTotalS, subjectTotals) {
       <span class="gcard-day">${dayName}</span>
       <span class="gcard-total">${dayH}h</span>
     </div>
-    <div class="gcard-bar">
-      <div class="gcard-bar-inner">${barSegments}</div>
-      <div class="gcard-legend">
-        ${subjectNames.map(sn => `<span class="glegend-item"><span class="glegend-dot" style="background:${subjectTotals[sn].color}"></span>${esc(sn)} ${(subjectTotals[sn].total_s/3600).toFixed(1)}h</span>`).join('')}
-      </div>
-    </div>
     ${ganttStrip}
     <div class="gcard-records">${recordRows}</div>
   </div>`;
@@ -1161,18 +1155,22 @@ function renderGanttStrip(dayRecords, date) {
   const rowH = 13;
   const barH = 10;
   
+  // Time span: 9:00–24:00 (15 hours, workday view)
+  const VIEW_START = 9 * 3600;   // 9:00
+  const VIEW_SPAN = 15 * 3600;   // 15 hours
+  
   // Build hour markers
-  const hourMarkers = [0, 6, 12, 18, 24].map(h => 
-    `<span class="gantt-hour" style="left:${(h/24*100).toFixed(1)}%">${h}h</span>`
+  const hourMarkers = [9, 12, 15, 18, 21, 24].map(h => 
+    `<span class="gantt-hour" style="left:${((h - 9) / 15 * 100).toFixed(1)}%">${h}h</span>`
   ).join('');
   
-  // Build bars
-  const totalSec = 86400;
+  // Build bars — position relative to 9:00–24:00 window
   const allBars = [];
   for (let ri = 0; ri < numRows; ri++) {
     rows[ri].forEach(rec => {
-      const left = Math.max((rec.secFromMidnight / totalSec * 100), 0);
-      const width = Math.max((rec.dur / totalSec * 100), 0.5);
+      const offset = rec.secFromMidnight - VIEW_START;
+      const left = Math.max(offset / VIEW_SPAN * 100, 0);
+      const width = Math.max((rec.dur / VIEW_SPAN * 100), 0.3);
       const desc = rec.description ? esc(rec.description) : '';
       const tooltip = desc
         ? `${esc(rec.subject_name)}: ${desc} (${rec.start}–${rec.end}, ${rec.duration})`
