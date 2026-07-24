@@ -915,7 +915,8 @@ function applyTheme(theme, persist = true) {
   if (!isMoss) previousTheme = theme;
   document.documentElement.classList.toggle('moss', isMoss);
   document.documentElement.classList.toggle('dark', isDark);
-  document.querySelector('.sidebar-brand').textContent = isMoss ? 'MOSS_SYS :: ONLINE' : 'Foclo';
+  const brand = document.querySelector('.sidebar-brand');
+  brand.childNodes[0].textContent = isMoss ? 'MOSS_SYS :: ONLINE ' : 'Foclo ';
   darkToggle.style.color = isMoss ? '#cc2200' : '';
   darkToggle.style.borderColor = isMoss ? '#cc2200' : '';
   updateDarkButton();

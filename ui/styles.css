@@ -74,7 +74,7 @@ button, input, select, .nav-item, .card, .form-row, .btn-row, .todo-list, .recor
 }
 .theme-toggle:hover { background: var(--hover); color: var(--text); }
 .sidebar-tagline { font-size: 10px; color: var(--muted); margin-top: 6px; text-align: center; }
-.sidebar-version { font-size: 9px; color: var(--accent); margin-top: 2px; text-align: center; opacity: 0.55; }
+.sidebar-version { font-size: 9px; color: var(--accent); margin-left: 6px; opacity: 0.55; }
 
 /* Content */
 .content { flex: 1; overflow-y: auto; padding: 18px 22px; scrollbar-width: none; }
