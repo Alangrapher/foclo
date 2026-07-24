@@ -1155,16 +1155,18 @@ function renderGanttStrip(dayRecords, date) {
   const rowH = 13;
   const barH = 10;
   
-  // Time span: 9:00–24:00 (15 hours, workday view)
+  // Time span: 9:00–次日 3:00 (18 hours, workday + late-night)
   const VIEW_START = 9 * 3600;   // 9:00
-  const VIEW_SPAN = 15 * 3600;   // 15 hours
+  const VIEW_END   = 27 * 3600;  // 次日 3:00
+  const VIEW_SPAN  = VIEW_END - VIEW_START;  // 18 hours
   
   // Build hour markers
-  const hourMarkers = [9, 12, 15, 18, 21, 24].map(h => 
-    `<span class="gantt-hour" style="left:${((h - 9) / 15 * 100).toFixed(1)}%">${h}h</span>`
-  ).join('');
+  const hourMarkers = [9, 12, 15, 18, 21, 24, 27].map(h => {
+    const label = h >= 24 ? (h - 24) + 'h' : h + 'h';
+    return `<span class="gantt-hour" style="left:${((h - 9) / 18 * 100).toFixed(1)}%">${label}</span>`;
+  }).join('');
   
-  // Build bars — position relative to 9:00–24:00 window
+  // Build bars — position relative to 9:00–27:00 window, click to highlight record row
   const allBars = [];
   for (let ri = 0; ri < numRows; ri++) {
     rows[ri].forEach(rec => {
@@ -1175,7 +1177,7 @@ function renderGanttStrip(dayRecords, date) {
       const tooltip = desc
         ? `${esc(rec.subject_name)}: ${desc} (${rec.start}–${rec.end}, ${rec.duration})`
         : `${esc(rec.subject_name)} ${rec.start}–${rec.end} (${rec.duration})`;
-      allBars.push(`<div class="gantt-bar" style="left:${left.toFixed(2)}%;width:${width.toFixed(2)}%;top:${ri*rowH}px;background:${rec.color}" title="${tooltip}"></div>`);
+      allBars.push(`<div class="gantt-bar" data-id="${rec.id}" style="left:${left.toFixed(2)}%;width:${width.toFixed(2)}%;top:${ri*rowH}px;background:${rec.color}" title="${tooltip}" onclick="highlightRecord(${rec.id})"></div>`);
     });
   }
   
@@ -1345,6 +1347,17 @@ async function saveEdit(span) {
 }
 
 function cancelEdit() { renderGallery(); renderTodayRecords(); }
+
+function highlightRecord(id) {
+  // Remove previous highlight
+  document.querySelectorAll('.grec-row.highlight').forEach(el => el.classList.remove('highlight'));
+  // Find and highlight the matching row, scroll into view
+  const row = document.querySelector(`.grec-row[data-id=\"${id}\"]`);
+  if (row) {
+    row.classList.add('highlight');
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
 
 async function delRecord(span) {
   const id = Number(span.closest('tr, .grec-row').dataset.id);
