@@ -351,11 +351,11 @@ tr:hover .records-actions, tr:focus-within .records-actions { visibility: visibl
 .records-table tr:last-child td { border-bottom: none; }
 
 /* Records: inline add row — unified */
-.records-add-row { display: flex; gap: 8px; align-items: center; padding: 6px 4px; margin-bottom: 8px; border-bottom: 1px solid var(--border); }
-.records-add-row input, .records-add-row select { border: none; background: transparent; font-size: 12px; color: var(--text); font-family: inherit; padding: 4px 6px; outline: none; flex: 1; min-width: 0; }
-.records-add-row input:focus, .records-add-row select:focus { border-bottom: 1px solid var(--accent); }
-.records-add-row .confirm-btn { background: var(--accent); color: #fff; border: none; border-radius: 6px; width: 24px; height: 24px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.records-add-row .confirm-btn:hover { background: var(--accent-h); }
+.records-add-row { display: flex; flex-direction: column; gap: 6px; padding: 8px 4px; margin-bottom: 8px; border-bottom: 1px solid var(--border); }
+.records-add-row-top { display: flex; gap: 8px; align-items: center; }
+.records-add-row-bottom { display: flex; gap: 8px; align-items: center; }
+.records-add-row-top .form-input { flex: 1; min-width: 0; }
+.records-add-row .form-select { padding: 5px 8px; font-size: 12px; }
 /* confirm-btn SVG icon coloring */
 .confirm-btn svg rect { fill: var(--accent); stroke: var(--accent); }
 .confirm-btn svg path { stroke: #fff; }
