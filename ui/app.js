@@ -91,10 +91,13 @@ function whenReady(fn) {
     attempts++;
     if (startIfReady()) {
       clearInterval(checkInterval);
-    } else if (attempts === maxAttempts && !rendered && !pyApi) {
-      rendered = true;
-      console.error('pywebview API not available after ' + maxAttempts + ' attempts; rendering offline state while continuing to wait');
-      fn();
+    } else if (attempts >= maxAttempts) {
+      clearInterval(checkInterval);
+      if (!rendered && !started) {
+        rendered = true;
+        console.error('pywebview API not available after ' + maxAttempts + ' attempts; rendering offline state');
+        fn();
+      }
     }
   }, 100);
 
@@ -354,8 +357,18 @@ async function loadSlots() {
   if (!slots.length) slots = [{index: 0, status: 'idle', subject_id: null, description: '', display_time: '00:00:00', collapsed: false}];
   slots.forEach(s => {
     if (localState[s.index]) {
-      if (s.subject_id === null || s.subject_id === undefined) s.subject_id = localState[s.index].subject_id;
-      if (s.description === null || s.description === undefined || s.description === '') s.description = localState[s.index].description || '';
+      // Trust backend for cleared idle slots (status idle + zero elapsed).
+      // Concurrent loadSlots from refreshClocks must not restore subject/description
+      // after archiveSlot clears the slot.
+      const status = s.status || 'idle';
+      const elapsed = s.elapsed_s != null ? Number(s.elapsed_s)
+        : (s.elapsed != null ? Number(s.elapsed) : null);
+      const displayZero = !s.display_time || s.display_time === '00:00:00';
+      const isClearedIdle = status === 'idle' && (elapsed === 0 || (elapsed === null && displayZero));
+      if (!isClearedIdle) {
+        if (s.subject_id === null || s.subject_id === undefined) s.subject_id = localState[s.index].subject_id;
+        if (s.description === null || s.description === undefined || s.description === '') s.description = localState[s.index].description || '';
+      }
       s.collapsed = localState[s.index].collapsed || false;
       // NOT merged: pendingAction — must never be restored from stale snapshot
       // (race condition: refreshClocks snapshots pendingAction=true before
@@ -740,7 +753,11 @@ async function fillRecordToSlot(id) {
   let slot = slots.find(s => s.status === 'idle');
   if (!slot) {
     await addSlot();
-    slot = slots.find(s => s.status === 'idle') || slots[slots.length - 1];
+    slot = slots.find(s => s.status === 'idle');
+  }
+  if (!slot) {
+    showApiError('No idle timer slot available (max 5)');
+    return;
   }
   const subj = subjects.find(s => s.name === record.subject_name);
   // Also try matching by subject_id for records loaded from API
@@ -968,7 +985,11 @@ async function startTodoTimer(arg) {
   let slot = slots.find(s => s.status === 'idle');
   if (!slot) {
     await addSlot();
-    slot = slots.find(s => s.status === 'idle') || slots[slots.length - 1];
+    slot = slots.find(s => s.status === 'idle');
+  }
+  if (!slot) {
+    showApiError('No idle timer slot available (max 5)');
+    return;
   }
   let subj = subjectById(todo.subject_id);
   if (!subj) subj = subjects.find(s => s.name === todo.subject);
@@ -1263,14 +1284,12 @@ async function saveEdit(span) {
     const desc = gRow.querySelector('.grec-desc input').value;
     const startInput = gRow.querySelector('.edit-start-time');
     const endInput = gRow.querySelector('.edit-end-time');
-    let start, end;
-    if (startInput && endInput && startInput.value && endInput.value) {
-      start = `${date}T${startInput.value}:00`;
-      end = `${date}T${endInput.value}:00`;
-    } else {
-      const fallback = recordRangeFromDuration(date, '0h');
-      start = fallback.start; end = fallback.end;
+    if (!startInput || !endInput || !startInput.value || !endInput.value) {
+      showApiError('Start and end times are required');
+      return;
     }
+    const start = `${date}T${startInput.value}:00`;
+    const end = `${date}T${endInput.value}:00`;
     const id = Number(gRow.dataset.id);
     if (window.pywebview && window.pywebview.api) {
       const result = await callApi(window.pywebview.api.update_record(id, {
@@ -1301,14 +1320,12 @@ async function saveEdit(span) {
   const subjectId = Number(subjectSelect.value) || null;
   const selectedSubject = subjectById(subjectId);
   const desc = tr.querySelector('.cell-desc input').value;
-  let start, end;
-  if (startInput && endInput && startInput.value && endInput.value) {
-    start = `${date}T${startInput.value}:00`;
-    end = `${date}T${endInput.value}:00`;
-  } else {
-    const fallback = recordRangeFromDuration(date, '0h');
-    start = fallback.start; end = fallback.end;
+  if (!startInput || !endInput || !startInput.value || !endInput.value) {
+    showApiError('Start and end times are required');
+    return;
   }
+  const start = `${date}T${startInput.value}:00`;
+  const end = `${date}T${endInput.value}:00`;
   if (window.pywebview && window.pywebview.api) {
     const result = await callApi(window.pywebview.api.update_record(Number(tr.dataset.id), {
       subject_id: subjectId,
@@ -1684,7 +1701,7 @@ async function quitPause() {
   if (pyApi) {
     const result = await callApi(pyApi.pause_all_slots(), 'Pause timers');
     if (!result || result.ok === false) return;
-    await callApi(pyApi.quit_app(), 'Quit app');
+    await callApi(pyApi.quit_app(false), 'Quit app');
   }
 }
 

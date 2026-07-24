@@ -1,6 +1,7 @@
 """Bridge — pywebview JS bridge API. Composes all service modules."""
 from __future__ import annotations
 
+import logging
 import os
 
 from timer_engine import TimerEngine
@@ -10,6 +11,8 @@ from app.record_service import get_records, add_record, update_record, delete_re
 from app.todo_service import get_todos, add_todo, toggle_todo, delete_todo
 from app.settings_service import get_settings, update_setting
 from app.backup_service import BackupService
+
+logger = logging.getLogger(__name__)
 
 
 class Api:
@@ -95,14 +98,21 @@ class Api:
         threading.Thread(target=_drag_loop, daemon=True).start()
         return {"ok": True}
 
-    def quit_app(self):
-        # Archive all active slots, then stop backup before exiting.
+    def quit_app(self, archive: bool = True):
+        # Optionally archive all active slots, then stop backup before exiting.
         # Wait for any in-progress backup to complete (max 5s) to avoid
         # leaving a partial backup file on disk.
-        try:
-            self.archive_all_slots()
-        except Exception:
-            pass
+        # quitPause path must pass archive=False so paused timers stay paused.
+        if archive:
+            try:
+                self.archive_all_slots()
+            except Exception:
+                logger.exception("archive_all_slots failed during quit")
+                # Persist pause state so elapsed time is not lost on exit
+                try:
+                    self.pause_all_slots()
+                except Exception:
+                    logger.exception("pause_all_slots failed after archive error during quit")
         if self._backup:
             try:
                 self._backup.stop()
@@ -162,29 +172,38 @@ class Api:
     def start_slot(self, index: int, subject_id: int | None = None):
         if err := self._validate_slot(index):
             return err
-        self.engine.start(index, subject_id)
-        self._refresh_tray()
-        return {"ok": True, "slot": self.engine.get_slot(index).to_dict()}
+        try:
+            self.engine.start(index, subject_id)
+            self._refresh_tray()
+            return {"ok": True, "slot": self.engine.get_slot(index).to_dict()}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
 
     def pause_slot(self, index: int):
         if err := self._validate_slot(index):
             return err
-        self.engine.pause(index)
-        self._refresh_tray()
-        return {"ok": True, "slot": self.engine.get_slot(index).to_dict()}
+        try:
+            self.engine.pause(index)
+            self._refresh_tray()
+            return {"ok": True, "slot": self.engine.get_slot(index).to_dict()}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
 
     def archive_slot(self, index: int, subject_id: int | None = None, description: str = ""):
         if err := self._validate_slot(index):
             return err
-        if subject_id is not None or description:
-            self.engine.update_slot_metadata(
-                index,
-                subject_id=subject_id,
-                description=description if description else None,
-            )
-        record_id = self.engine.archive(index)
-        self._refresh_tray()
-        return {"ok": True, "record_id": record_id}
+        try:
+            if subject_id is not None or description:
+                self.engine.update_slot_metadata(
+                    index,
+                    subject_id=subject_id,
+                    description=description if description else None,
+                )
+            record_id = self.engine.archive(index)
+            self._refresh_tray()
+            return {"ok": True, "record_id": record_id}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
 
     def clear_slot(self, index: int):
         if err := self._validate_slot(index):

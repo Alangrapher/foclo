@@ -206,6 +206,16 @@ def init_db():
         except sqlite3.OperationalError as e:
             if "duplicate column" not in str(e).lower():
                 raise
+        # Migration: resume_record_id + base_duration_s for resume archive / crash recovery
+        for col_sql in (
+            "ALTER TABLE slot_state ADD COLUMN resume_record_id INTEGER",
+            "ALTER TABLE slot_state ADD COLUMN base_duration_s REAL NOT NULL DEFAULT 0",
+        ):
+            try:
+                conn.execute(col_sql)
+            except sqlite3.OperationalError as e:
+                if "duplicate column" not in str(e).lower():
+                    raise
         try:
             conn.execute("ALTER TABLE todos ADD COLUMN subject_id INTEGER REFERENCES subjects(id)")
         except sqlite3.OperationalError as e:
