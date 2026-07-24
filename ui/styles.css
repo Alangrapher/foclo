@@ -563,6 +563,8 @@ html.moss .todo-checkbox { border-radius: 0; }
 html.moss .compact-timer-row .arrow { border-radius: 0; }
 html.moss .modal-card { border-radius: 0; }
 html.moss .modal-accent { border-radius: 0; }
+html.moss .gantt-strip { border-radius: 0; }
+html.moss .gantt-bar { border-radius: 0; }
 
 /* ═══════════════════════════════════════════════════════════
    DARK MODE — CSS variable overrides (aligned to SPEC tokens)
@@ -766,7 +768,7 @@ html.dark .window { border-color: #30363D; box-shadow: 0 12px 48px rgba(0,0,0,0.
 .gantt-hour:nth-child(6) { animation-delay: 0.17s; }
 .gantt-hour:nth-child(7) { animation-delay: 0.20s; }
 .gantt-strip {
-  position: relative; width: 100%; background: var(--hover);
+  position: relative; width: 100%; background: var(--hover); border-radius: 3px;
 }
 .gantt-bar {
   position: absolute; border-radius: 3px;
