@@ -357,7 +357,10 @@ async function loadSlots() {
       if (s.subject_id === null || s.subject_id === undefined) s.subject_id = localState[s.index].subject_id;
       if (s.description === null || s.description === undefined || s.description === '') s.description = localState[s.index].description || '';
       s.collapsed = localState[s.index].collapsed || false;
-      s.pendingAction = localState[s.index].pendingAction || false;
+      // NOT merged: pendingAction — must never be restored from stale snapshot
+      // (race condition: refreshClocks snapshots pendingAction=true before
+      //  _doStartSlot finally clears it, then loadSlots writes true back,
+      //  permanently locking Pause/Archive buttons on Windows edgechromium)
     }
     if (s.collapsed === undefined) s.collapsed = false;
   });
