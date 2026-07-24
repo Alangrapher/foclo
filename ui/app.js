@@ -255,8 +255,8 @@ function bindStaticControls() {
   document.getElementById('resetConfirmModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeResetModal(); });
   document.getElementById('switchTimerModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeSwitchTimerModal(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllModals(); });
-  document.querySelectorAll('#page-export .btn-secondary').forEach(btn => btn.addEventListener('click', () => {
-    document.querySelectorAll('#page-export .btn-secondary').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#export-format-group .btn-secondary').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelectorAll('#export-format-group .btn-secondary').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   }));
   // Browse button for export folder
@@ -1254,8 +1254,6 @@ function editRecord(span) {
   
   // Table row: original logic (for Timer page today-records)
   const tr = row;
-  if (tr.classList.contains('records-editing')) return;
-  tr.classList.add('records-editing');
   const dateCell = tr.querySelector('.cell-date');
   if (dateCell) dateCell.innerHTML = `<input type="date" value="${attr(tr.dataset.date)}">`;
   const record = records.find(r => Number(r.id) === Number(tr.dataset.id));
