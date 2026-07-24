@@ -21,8 +21,14 @@ body {
   min-height: 100vh;
 }
 
-button, input, select, .nav-item, .card, .form-row, .btn-row, .todo-list, .records-scroll-wrap, .chip, .filter-chips, .setting-row, .toggle, .tile, .compact-panel, .modal-card {
+button, input, select, input[type="time"], input[type="date"], .nav-item, .card, .form-row, .btn-row, .todo-list, .records-scroll-wrap, .records-add-row, .chip, .filter-chips, .setting-row, .toggle, .tile, .compact-panel, .modal-card {
   -webkit-app-region: no-drag;
+}
+
+/* macOS WebKit: time/date inputs need explicit clickability */
+input[type="time"], input[type="date"] {
+  -webkit-user-select: text;
+  cursor: text;
 }
 
 .window {
@@ -758,4 +764,124 @@ html.dark .window { border-color: #30363D; box-shadow: 0 12px 48px rgba(0,0,0,0.
 .gantt-empty {
   font-size: 10px; color: var(--muted); padding: 2px 6px;
   display: block; text-align: center;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MICRO-INTERACTIONS & MOTION
+   Subtle, macOS-flavored spring / ease transitions.
+   Everything below is neutralized under prefers-reduced-motion.
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 1 — Page transition (fade + gentle slide up), retriggered on nav */
+.page-enter-anim { animation: page-enter 0.30s var(--ease-spring); }
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 3 — Card / list-item entrance (staggered on the records gallery) */
+@keyframes item-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.gallery-card { animation: item-enter 0.34s var(--ease-spring) backwards; }
+.gallery-card:nth-child(2)   { animation-delay: 0.04s; }
+.gallery-card:nth-child(3)   { animation-delay: 0.08s; }
+.gallery-card:nth-child(4)   { animation-delay: 0.12s; }
+.gallery-card:nth-child(5)   { animation-delay: 0.16s; }
+.gallery-card:nth-child(n+6) { animation-delay: 0.20s; }
+
+/* 2 — Button / control tactile feedback */
+.btn:not(:disabled):active { transform: scale(0.96); }
+.btn-primary:hover { box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 32%, transparent); }
+.btn-primary:not(:disabled):active { box-shadow: 0 1px 4px color-mix(in srgb, var(--accent) 24%, transparent); }
+.nav-item:active      { transform: scale(0.985); }
+.chip:active          { transform: scale(0.94);  }
+.add-slot-btn:active  { transform: scale(0.9);   }
+.theme-toggle:active  { transform: scale(0.97);  }
+.confirm-btn:active   { transform: scale(0.9);   }
+.act:active           { transform: scale(0.85);  }
+.todo-checkbox:active { transform: scale(0.9);   }
+
+/* 5 — Sidebar nav selected-state: smoother, springier settle */
+.nav-item { transition: background-color 0.18s ease, color 0.18s ease, transform 0.14s var(--ease-spring); }
+
+/* 4 — Timer: alive running indicator + state-change pop */
+.badge.running .dot { animation: pulse-dot 2s ease-in-out infinite; }
+@keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+.timer-clock { transition: color 0.25s ease; }
+.timer-clock.clock-bump { animation: clock-bump 0.4s var(--ease-spring); }
+@keyframes clock-bump {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.035); }
+  100% { transform: scale(1); }
+}
+
+/* Todo checkbox — check pop */
+.todo-checkmark { transform-box: fill-box; transform-origin: center; }
+.todo-item.done .todo-checkmark { animation: check-pop 0.3s var(--ease-spring); }
+@keyframes check-pop {
+  0%   { transform: scale(0.3); opacity: 0; }
+  60%  { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* 6 — Modal in / out */
+.modal-overlay.show { animation: overlay-in 0.2s ease; }
+.modal-overlay.show .modal-card { animation: modal-in 0.3s var(--ease-spring); }
+.modal-overlay.closing { animation: overlay-out 0.18s ease forwards; }
+.modal-overlay.closing .modal-card { animation: modal-out 0.18s ease forwards; }
+@keyframes overlay-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes overlay-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+@keyframes modal-out {
+  from { opacity: 1; transform: translateY(0)   scale(1); }
+  to   { opacity: 0; transform: translateY(6px) scale(0.98); }
+}
+
+/* 7 — Theme cross-fade (only enabled during a user-initiated switch) */
+html.theme-anim,
+html.theme-anim body,
+html.theme-anim .window,
+html.theme-anim .prototype,
+html.theme-anim .sidebar,
+html.theme-anim .content,
+html.theme-anim .card,
+html.theme-anim .tile,
+html.theme-anim .nav-item,
+html.theme-anim .btn,
+html.theme-anim .chip,
+html.theme-anim .badge,
+html.theme-anim .todo-item,
+html.theme-anim .subject-row,
+html.theme-anim .setting-row,
+html.theme-anim .form-input,
+html.theme-anim .form-select,
+html.theme-anim .gallery-card,
+html.theme-anim .modal-card,
+html.theme-anim .compact-panel,
+html.theme-anim .records-table td,
+html.theme-anim .records-table th,
+html.theme-anim .gantt-strip,
+html.theme-anim .theme-toggle {
+  transition: background-color 0.35s ease, color 0.35s ease,
+              border-color 0.35s ease, box-shadow 0.35s ease !important;
+}
+
+/* 8 — Respect reduced-motion: neutralize all of the above */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

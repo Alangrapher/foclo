@@ -59,6 +59,7 @@ let previousTheme = 'light';
 let compactRestorePending = false;
 let clickCount = 0;
 let clickTimer = null;
+let themeAnimTimer = null;
 let lastExport = 'No exports yet';
 let isRefreshing = false;
 let isExporting = false;
@@ -111,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
   restoreUiPreferences();
   initializeDynamicDates();
   bindStaticControls();
+  populateTimeDropdowns();
   // Load data when pywebview API is ready, then render.
   // Must happen after DOMContentLoaded so renderAll() can find DOM elements.
   whenReady(async () => {
@@ -419,6 +421,8 @@ async function refreshClocks() {
   }
 }
 
+const _prevSlotStatus = {};
+
 function updateTimerCards() {
   slots.forEach(slot => {
     const card = document.querySelector(`.timer-slot-card[data-slot="${slot.index}"]`);
@@ -433,10 +437,17 @@ function updateTimerCards() {
     if (slotSubj && slot.collapsed) slotSubj.textContent = slot.display_time || '00:00:00';
     const badge = card.querySelector('.badge');
     const status = slot.status || 'idle';
-    if (badge) {
+    if (badge && badge.className !== `badge ${status}`) {
       badge.className = `badge ${status}`;
       badge.innerHTML = `<span class="dot"></span> ${status[0].toUpperCase() + status.slice(1)}`;
     }
+    // Bump clock on status change
+    if (clock && _prevSlotStatus[slot.index] !== status) {
+      clock.classList.remove('clock-bump');
+      void clock.offsetWidth;
+      clock.classList.add('clock-bump');
+    }
+    _prevSlotStatus[slot.index] = status;
   });
 }
 
@@ -809,7 +820,12 @@ function renderCompact() {
   const subj = subjectById(slot.subject_id);
   const status = slot.status || 'idle';
   const compactTop = panel.querySelector('.compact-top');
-  if (compactTop) compactTop.innerHTML = `<span class="badge ${status}"><span class="dot"></span> ${status[0].toUpperCase() + status.slice(1)}</span>`;
+  if (compactTop) {
+    const newBadgeClass = `badge ${status}`;
+    if (!compactTop.firstElementChild || compactTop.firstElementChild.className !== newBadgeClass) {
+      compactTop.innerHTML = `<span class="${newBadgeClass}"><span class="dot"></span> ${status[0].toUpperCase() + status.slice(1)}</span>`;
+    }
+  }
   const indicator = panel.querySelector('.compact-slot-indicator');
   if (indicator) indicator.textContent = `${compactIndex + 1} / ${slots.length}`;
   const clockEl = panel.querySelector('.compact-clock');
@@ -873,7 +889,15 @@ function exitCompact() {
 
 function switchPage(name) {
   document.querySelectorAll('.nav-item[data-page]').forEach(n => n.classList.toggle('active', n.dataset.page === name));
-  document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + name));
+  const target = document.getElementById('page-' + name);
+  document.querySelectorAll('.page').forEach(p => { if (p !== target) p.classList.remove('active'); });
+  if (target) {
+    target.classList.add('active');
+    // Retrigger page-enter animation (reflow trick)
+    target.classList.remove('page-enter-anim');
+    void target.offsetWidth;
+    target.classList.add('page-enter-anim');
+  }
 }
 
 function toggleThemeClick() {
@@ -913,6 +937,12 @@ function applyTheme(theme, persist = true) {
   isMoss = theme === 'moss';
   isDark = theme === 'dark';
   if (!isMoss) previousTheme = theme;
+  // Theme cross-fade: animate only on user-initiated switches
+  if (persist) {
+    document.documentElement.classList.add('theme-anim');
+    clearTimeout(themeAnimTimer);
+    themeAnimTimer = setTimeout(() => document.documentElement.classList.remove('theme-anim'), 400);
+  }
   document.documentElement.classList.toggle('moss', isMoss);
   document.documentElement.classList.toggle('dark', isDark);
   const brand = document.querySelector('.sidebar-brand');
@@ -1192,6 +1222,23 @@ function renderGanttStrip(dayRecords, date) {
   </div>`;
 }
 
+function populateTimeDropdowns() {
+  const opts = [];
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      const hh = String(h).padStart(2, '0');
+      const mm = String(m).padStart(2, '0');
+      const t = `${hh}:${mm}`;
+      opts.push(`<option value="${t}">${t}</option>`);
+    }
+  }
+  const html = opts.join('');
+  const s = document.querySelector('.records-add-start');
+  const e = document.querySelector('.records-add-end');
+  if (s) s.innerHTML = '<option value="">Start</option>' + html;
+  if (e) e.innerHTML = '<option value="">End</option>' + html;
+}
+
 async function addRecord() {
   const row = document.getElementById('recordsAddRow');
   const subjName = row.querySelector('.records-add-subject').value;
@@ -1212,8 +1259,8 @@ async function addRecord() {
     await loadRecords();
   } else records.unshift({id: Date.now(), subject_id: subj?.id, subject_name: subjName, description: desc, duration: '0h', date});
   row.querySelector('.records-add-desc').value = '';
-  row.querySelector('.records-add-start').value = '';
-  row.querySelector('.records-add-end').value = '';
+  row.querySelector('.records-add-start').selectedIndex = 0;
+  row.querySelector('.records-add-end').selectedIndex = 0;
   renderGallery(); renderTodayRecords(); updateTiles();
 }
 
@@ -1458,12 +1505,26 @@ function closeQuickAddSubjectModal() {
 
 function showModal(target) {
   if (!target) return;
-  closeAllModals();
+  closeAllModals(true);
+  // Force layout then animate in
+  target.classList.remove('closing');
+  void target.offsetWidth;
   target.classList.add('show');
 }
 
-function closeAllModals() {
-  document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
+function closeAllModals(instant) {
+  const modals = document.querySelectorAll('.modal-overlay.show');
+  if (!modals.length) return;
+  if (instant) {
+    modals.forEach(m => { m.classList.remove('show', 'closing'); });
+  } else {
+    modals.forEach(m => {
+      if (m.classList.contains('closing')) return;
+      m.classList.add('closing');
+      const onEnd = () => { m.classList.remove('show', 'closing'); m.removeEventListener('animationend', onEnd); };
+      m.addEventListener('animationend', onEnd);
+    });
+  }
   pendingRemoveSlot = null;
 }
 
