@@ -674,12 +674,12 @@ html.dark .window { border-color: #30363D; box-shadow: 0 12px 48px rgba(0,0,0,0.
 }
 .grec-row:hover { background: var(--hover); }
 .grec-row.highlight {
-  animation: grec-flash 1.2s ease;
+  animation: grec-flash 2s ease-out;
   background: var(--accent-subtle, rgba(94,106,210,0.15));
 }
 @keyframes grec-flash {
   0%   { background: var(--accent, #5E6AD2); color: #fff; }
-  30%  { background: var(--accent-subtle, rgba(94,106,210,0.15)); color: inherit; }
+  40%  { background: var(--accent-subtle, rgba(94,106,210,0.15)); color: inherit; }
   100% { background: transparent; }
 }
 .grec-line1 {

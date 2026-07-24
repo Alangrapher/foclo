@@ -1162,7 +1162,8 @@ function renderGanttStrip(dayRecords, date) {
   
   // Build hour markers
   const hourMarkers = [9, 12, 15, 18, 21, 24, 27].map(h => {
-    const label = h >= 24 ? (h - 24) + 'h' : h + 'h';
+    const display = h >= 24 ? (h - 24) : h;
+    const label = String(display).padStart(2, '0') + ':00';
     return `<span class="gantt-hour" style="left:${((h - 9) / 18 * 100).toFixed(1)}%">${label}</span>`;
   }).join('');
   
